@@ -1,12 +1,11 @@
 name: "portfolio"
 output_dir: docs
+runtime: shiny
 navbar:
   title: "Portfolio"
   left:
     - text: "Home"
       href: index.html
-    - text: "About"
-      href: about.html
     - text: "Portfolio 1"
       href: p01.html
     - text: "Portfolio 2"

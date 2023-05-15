@@ -13,7 +13,7 @@
 
 <title>Portfolio 1</title>
 
-<script src="site_libs/header-attrs-2.13/header-attrs.js"></script>
+<script src="site_libs/header-attrs-2.20/header-attrs.js"></script>
 <script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="site_libs/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
@@ -141,11 +141,15 @@ $(document).ready(function () {
     href = "index.html";
   var menuAnchor = $('a[href="' + href + '"]');
 
-  // mark it active
-  menuAnchor.tab('show');
-
-  // if it's got a parent navbar menu mark it active as well
-  menuAnchor.closest('li.dropdown').addClass('active');
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
 
   // Navbar adjustments
   var navHeight = $(".navbar").first().height() + 15;
@@ -174,8 +178,8 @@ $(document).ready(function () {
   border-radius: 4px;
 }
 
-.tabset-dropdown > .nav-tabs > li.active:before {
-  content: "";
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
   font-family: 'Glyphicons Halflings';
   display: inline-block;
   padding: 10px;
@@ -183,16 +187,9 @@ $(document).ready(function () {
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
-  content: "&#xe258;";
-  border: none;
-}
-
-.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
-  content: "";
+  content: "\e258";
   font-family: 'Glyphicons Halflings';
-  display: inline-block;
-  padding: 10px;
-  border-right: 1px solid #ddd;
+  border: none;
 }
 
 .tabset-dropdown > .nav-tabs > li.active {
@@ -249,9 +246,6 @@ $(document).ready(function () {
   <a href="index.html">Home</a>
 </li>
 <li>
-  <a href="about.html">About</a>
-</li>
-<li>
   <a href="p01.html">Portfolio 1</a>
 </li>
 <li>
@@ -298,15 +292,242 @@ $(document).ready(function () {
 </div>
 
 
-<blockquote>
-<p>The projects should be numbered consecutively (i.e., in the order in
-which you began them), and should include for each project a description
-of the goal, the product (computer program, hand graph, computer graph,
-etc.), the data, and some interpretation. Reports must be reproducible
-and of high quality in terms of writing, grammar, presentation, etc.</p>
-</blockquote>
-<pre class="r"><code>library(tidyverse) 
-library(datasauRus)</code></pre>
+<pre class="r"><code>suppressWarnings(library(tidyverse))</code></pre>
+<pre><code>## ── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+## ✔ dplyr     1.1.0     ✔ readr     2.1.4
+## ✔ forcats   1.0.0     ✔ stringr   1.5.0
+## ✔ ggplot2   3.4.1     ✔ tibble    3.2.1
+## ✔ lubridate 1.9.2     ✔ tidyr     1.3.0
+## ✔ purrr     1.0.1     
+## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+## ✖ dplyr::filter() masks stats::filter()
+## ✖ dplyr::lag()    masks stats::lag()
+## ℹ Use the ]8;;http://conflicted.r-lib.org/conflicted package]8;; to force all conflicts to become errors</code></pre>
+<p>In this portfolio I explore The Americans and Arts study. Which is “a
+series of studies measuring participation in and attitudes about the
+arts and arts in education.” The study took place during the years of
+1973, 1975, 1980, 1984, 1987, and 1992. In general my goal is took look
+at various questions asked in this data set regarding attitudes towards
+the arts and how they’ve changed over time.</p>
+<p>First let’s load the data</p>
+<pre class="r"><code>#1973
+load(&quot;DS0001/35575-0001-Data.rda&quot;)
+D1973&lt;-da35575.0001
+rm(da35575.0001)
+
+#1975
+load(&quot;DS0002/35575-0002-Data.rda&quot;)
+D1975&lt;-da35575.0002
+rm(da35575.0002)
+
+#1980
+load(&quot;DS0003/35575-0003-Data.rda&quot;)
+D1980&lt;-da35575.0003
+rm(da35575.0003)
+
+#1984
+load(&quot;DS0004/35575-0004-Data.rda&quot;)
+D1984&lt;-da35575.0004
+rm(da35575.0004)
+
+#1987
+load(&quot;DS0005/35575-0005-Data.rda&quot;)
+D1987&lt;-da35575.0005
+rm(da35575.0005)
+
+#1992
+load(&quot;DS0006/35575-0006-Data.rda&quot;)
+D1992&lt;-da35575.0006
+rm(da35575.0006)</code></pre>
+<p>Alright so among all the data sets, they share one question in
+particular that I find interesting which is:</p>
+<p>“Some people think that classes in the arts should be taught in
+public schools for children to learn and get credit for, just like math
+or science or English. Other people think that classes like those should
+be given, but only after school or as a non-credit activity; and still
+others don’t think they should be given at all. In your opinion, should
+the public schools in this area teach courses in art appreciation for
+credit, should it be an after-school or non-credit course, or should it
+not be offered at all?”</p>
+<p>So essentially I’m interested in seeing how the answer to this
+question varies over time.</p>
+<p>So now comes the tricky part. I have to merge these data sets…</p>
+<p>First let’s reformat each data frame so it has the same structure</p>
+<pre class="r"><code>library(expss) %&gt;% suppressWarnings() %&gt;% suppressPackageStartupMessages()
+
+#1973
+D1973 &lt;- D1973 %&gt;%  
+  select(CASEID, Q26A_7) %&gt;%
+  rename(&quot;Art_Appreciation&quot; = &quot;Q26A_7&quot;) %&gt;%
+  mutate(Year = 1973) %&gt;% 
+  mutate(Art_Appreciation = as.character(Art_Appreciation)) %&gt;%
+  mutate(Art_Appreciation = dplyr::recode(Art_Appreciation,
+                                   &quot;(1) Teach for credit&quot; = &quot;1&quot;,
+                                   &quot;(2) Non-credit&quot; = &quot;2&quot;,
+                                   &quot;(3) Should not offer at all&quot; = &quot;3&quot;,
+                                   &quot;(4) Not sure&quot; = &quot;4&quot;)) %&gt;%
+  mutate(Art_Appreciation = as.numeric(Art_Appreciation)) %&gt;%
+  apply_labels(CASEID = &quot;&quot;,
+               Art_Appreciation = &quot;&quot;,
+               Year = &quot;&quot;)
+
+#1975
+D1975 &lt;- D1975 %&gt;%  
+  select(CASEID, Q17C_11) %&gt;%
+  rename(&quot;Art_Appreciation&quot; = &quot;Q17C_11&quot;) %&gt;%
+  mutate(Year = 1975) %&gt;% 
+  mutate(Art_Appreciation = as.character(Art_Appreciation)) %&gt;%
+  mutate(Art_Appreciation = dplyr::recode(Art_Appreciation,
+                                   &quot;(1) Teach for credit&quot; = &quot;1&quot;,
+                                   &quot;(2) Non-credit&quot; = &quot;2&quot;,
+                                   &quot;(3) Not at all&quot; = &quot;3&quot;,
+                                   &quot;(4) Not sure&quot; = &quot;4&quot;)) %&gt;%
+  mutate(Art_Appreciation = as.numeric(Art_Appreciation)) %&gt;%
+  apply_labels(CASEID = &quot;&quot;,
+               Art_Appreciation = &quot;&quot;,
+               Year = &quot;&quot;)
+
+#1980
+D1980 &lt;- D1980 %&gt;%  
+  select(CASEID, Q14C_11) %&gt;%
+  rename(&quot;Art_Appreciation&quot; = &quot;Q14C_11&quot;) %&gt;%
+  mutate(Year = 1980) %&gt;% 
+  mutate(Art_Appreciation = as.character(Art_Appreciation)) %&gt;%
+  mutate(Art_Appreciation = dplyr::recode(Art_Appreciation,
+                                   &quot;(1) Teach for credit&quot; = &quot;1&quot;,
+                                   &quot;(2) Non-credit&quot; = &quot;2&quot;,
+                                   &quot;(3) Not at all&quot; = &quot;3&quot;,
+                                   &quot;(4) Not sure&quot; = &quot;4&quot;)) %&gt;%
+  mutate(Art_Appreciation = as.numeric(Art_Appreciation)) %&gt;%
+  apply_labels(CASEID = &quot;&quot;,
+               Art_Appreciation = &quot;&quot;,
+               Year = &quot;&quot;)
+
+#1984
+D1984 &lt;- D1984 %&gt;%  
+  select(CASEID, Q16C_11) %&gt;%
+  rename(&quot;Art_Appreciation&quot; = &quot;Q16C_11&quot;) %&gt;%
+  mutate(Year = 1984) %&gt;% 
+  mutate(Art_Appreciation = as.character(Art_Appreciation)) %&gt;%
+  mutate(Art_Appreciation = dplyr::recode(Art_Appreciation,
+                                   &quot;(1) Teach for credit&quot; = &quot;1&quot;,
+                                   &quot;(2) Non-credit&quot; = &quot;2&quot;,
+                                   &quot;(3) Not at all&quot; = &quot;3&quot;,
+                                   &quot;(4) Not sure&quot; = &quot;4&quot;)) %&gt;%
+  mutate(Art_Appreciation = as.numeric(Art_Appreciation)) %&gt;%
+  apply_labels(CASEID = &quot;&quot;,
+               Art_Appreciation = &quot;&quot;,
+               Year = &quot;&quot;)
+
+#1987
+D1987 &lt;- D1987 %&gt;%  
+  select(CASEID, Q15D_9) %&gt;%
+  rename(&quot;Art_Appreciation&quot; = &quot;Q15D_9&quot;) %&gt;%
+  mutate(Year = 1987) %&gt;% 
+  mutate(Art_Appreciation = as.character(Art_Appreciation)) %&gt;%
+  mutate(Art_Appreciation = dplyr::recode(Art_Appreciation,
+                                   &quot;(1) Teach for credit&quot; = &quot;1&quot;,
+                                   &quot;(2) Non-credit&quot; = &quot;2&quot;,
+                                   &quot;(3) Not at all&quot; = &quot;3&quot;,
+                                   &quot;(4) Not sure&quot; = &quot;4&quot;)) %&gt;%
+  mutate(Art_Appreciation = as.numeric(Art_Appreciation)) %&gt;%
+  apply_labels(CASEID = &quot;&quot;,
+               Art_Appreciation = &quot;&quot;,
+               Year = &quot;&quot;)
+
+#1992
+D1992 &lt;- D1992 %&gt;%  
+  select(CASEID, Q13I_7) %&gt;%
+  rename(&quot;Art_Appreciation&quot; = &quot;Q13I_7&quot;) %&gt;%
+  mutate(Year = 1992) %&gt;% 
+  mutate(Art_Appreciation = as.character(Art_Appreciation)) %&gt;%
+mutate(Art_Appreciation = dplyr::recode(Art_Appreciation,
+                                 &quot;(1) Teach for credit&quot; = &quot;1&quot;,
+                                 &quot;(2) After school non-credit&quot; = &quot;2&quot;,
+                                 &quot;(3) Not at all&quot; = &quot;3&quot;,
+                                 &quot;(4) Not sure&quot; = &quot;4&quot;)) %&gt;%
+mutate(Art_Appreciation = as.numeric(Art_Appreciation)) %&gt;%
+  apply_labels(CASEID = &quot;&quot;,
+               Art_Appreciation = &quot;&quot;,
+               Year = &quot;&quot;)
+
+detach(&quot;package:expss&quot;)</code></pre>
+<p>PHEW! That’s a lot of data. Now let’s merge it all together by
+combining the rows</p>
+<pre class="r"><code>art_attitudes&lt;-bind_rows(D1973,D1975,D1980,D1984,D1987,D1992)
+art_attitudes&lt;-art_attitudes %&gt;% mutate(CASEID = 1:length(CASEID))
+
+head(art_attitudes,10)</code></pre>
+<pre><code>##    CASEID Art_Appreciation Year
+## 1       1                1 1973
+## 2       2               NA 1973
+## 3       3                1 1973
+## 4       4                1 1973
+## 5       5                1 1973
+## 6       6                2 1973
+## 7       7                1 1973
+## 8       8                4 1973
+## 9       9                2 1973
+## 10     10                1 1973</code></pre>
+<p>Yay!!! Now we have a working data set that data collected on this
+question from 1973 to 1992. Let’s explore it!</p>
+<p>First I want to see how the histograms compare</p>
+<pre class="r"><code>art_attitudes %&gt;% ggplot(aes(x=Art_Appreciation))+
+  facet_wrap(~Year)+
+  geom_histogram(color=&quot;black&quot;)+
+  xlab(&quot;Art Appreciation Rating&quot;)+ 
+  ylab(&quot;Count&quot;)</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<pre><code>## Warning: Removed 36 rows containing non-finite values (`stat_bin()`).</code></pre>
+<p><img src="p01_files/figure-html/art_attitudes-histograms-1.png" width="672" /></p>
+<p>They look fairly similar over time. I’m going to dive deeper and look
+at the means. However, I do not expect this to look very different.</p>
+<pre class="r"><code>art_means&lt;-art_attitudes %&gt;% group_by(Year) %&gt;% 
+  summarise(mean_rating=mean(Art_Appreciation,na.rm = TRUE),
+            .groups = &#39;drop&#39;) %&gt;%
+  as.data.frame()
+
+art_means %&gt;% ggplot(aes(x=Year, 
+                         y=mean_rating))+
+  ylab(&quot;Average Rating&quot;)+
+  geom_point()+
+  geom_line()</code></pre>
+<p><img src="p01_files/figure-html/art_attitudes-means-1.png" width="672" /></p>
+<p>Interesting. There is a decline, but really this decline indicates an
+increase in ratings if you think about it. 1.5 gets close to 1 by
+becoming 1.3. However, I’m curious if this is actually significant in
+anyway, because the y-scale has clearly been modified to show the
+differences. Let’s run a simple t-test between 1973 and 1992. I will
+also sample 1500 from 1973 since it’s sample size is twice the size of
+1992. I do this so the equal variances assumption is not violated.</p>
+<pre class="r"><code>set.seed(8444)
+
+DS1973&lt;-sample(D1973$Art_Appreciation,1500)
+
+t.test(DS1973,D1992$Art_Appreciation, alternative = &quot;greater&quot;)</code></pre>
+<pre><code>## 
+##  Welch Two Sample t-test
+## 
+## data:  DS1973 and D1992$Art_Appreciation
+## t = 6.111, df = 2574, p-value = 5.702e-10
+## alternative hypothesis: true difference in means is greater than 0
+## 95 percent confidence interval:
+##  0.1269859       Inf
+## sample estimates:
+## mean of x mean of y 
+##  1.518444  1.344667</code></pre>
+<p>Well, it’s very significant. However, I still do not trust these
+results considering the sample size for each was over 1,000. It’s very
+easy for it be significant with a sample size greater than 1,000.
+Therefore, I think I will need to investigate better methods on how to
+analyze this with an overly large sample size. Perhaps I can achieve
+this for my next portfolio.</p>
+<p>Aside from this, the data is very interesting. There are tons of
+other variables I would like to explore in this data set. However, I
+would say this portfolio demonstrates more my ability to merge data sets
+for analysis as this was the majority of the time I spent on this
+project. This portfolio has been fun and I would like to continue
+exploring the art_attitudes data set I created in the future.</p>
 
 
 

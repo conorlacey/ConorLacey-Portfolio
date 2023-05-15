@@ -2,19 +2,579 @@
 title: "Portfolio 10"
 ---
 
-> The projects should be numbered consecutively (i.e., in the order in which you began them), and should include for each project a description of the goal, the product (computer program, hand graph, computer graph, etc.), the data, and some interpretation. Reports must be reproducible and of high quality in terms of writing, grammar, presentation, etc.
-
-
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed hendrerit purus ut dapibus vestibulum. Suspendisse potenti. Cras faucibus mauris in leo condimentum lobortis. Cras euismod sollicitudin augue, ut venenatis quam placerat eu. Maecenas vulputate rhoncus odio, in interdum risus malesuada gravida. Maecenas cursus sed dui sit amet lacinia. Nunc dignissim metus nec ex mattis, non rutrum urna cursus. Morbi pretium elementum purus, in aliquet libero eleifend ac. Nam finibus, ligula sed ultrices pharetra, tellus risus consequat tortor, facilisis maximus elit lectus a metus. Sed vel dictum nulla, vitae blandit turpis. Integer pulvinar tempor diam ac venenatis. Vestibulum est lacus, suscipit et ipsum nec, consectetur iaculis leo. Morbi libero lacus, scelerisque non sollicitudin vitae, accumsan sed tellus. Suspendisse quis orci tellus.
-
-
-```{r, child='p10/demo.Rmd'}
+```{r libraries}
+suppressWarnings(
+  suppressMessages(
+    c(
+    library(shiny),
+    library(tidyverse),
+    library(rsconnect)
+    )
+  )
+)
 ```
 
+### Introduction
 
-Aliquam sed ex et lorem consequat feugiat at porta leo. Fusce id hendrerit tellus. Maecenas dictum felis neque, quis dictum metus tristique eu. Vivamus sed blandit nisl. Integer ut urna dolor. Cras in egestas eros, in aliquam nisi. Duis vitae elementum quam. Vivamus vel turpis commodo, porttitor urna vitae, viverra sem. Nam nec dignissim erat, id viverra libero. Integer vel lectus pellentesque tortor fringilla posuere. Vivamus quis magna accumsan, porta tortor at, aliquam urna. Aliquam vestibulum ante massa, ut gravida lectus sagittis vitae.
+Alright for a my last portfolio I am going to be making a shiny app for Eric. Specifically I am going to make a z-distribution that will be able to shade in the p-values and display the alpha cut-off rejection regions.
 
-Sed eget ipsum auctor, gravida magna sit amet, tincidunt mi. Nulla erat ante, volutpat nec sem eget, luctus posuere est. Praesent convallis nunc ac turpis bibendum, in maximus magna convallis. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Sed sit amet nulla ante. Sed elit sem, lobortis nec nisi a, rhoncus ornare nunc. Curabitur ultrices neque feugiat, facilisis magna eu, consectetur magna. Mauris id eleifend ex.
+Now shiny is a whole different ball game for r, so I'm going to start off very simple and work our way up to more difficult tasks for this project.
 
-Morbi tincidunt mollis odio sit amet feugiat. Ut vel risus eu ante dictum consequat. Integer et luctus mauris. Donec nec faucibus urna, sed commodo risus. Nam elementum pulvinar erat, eget convallis est blandit vel. Etiam gravida sapien eu massa hendrerit maximus. Proin dolor quam, porta vitae libero non, venenatis porta tellus. Vivamus et elit a est aliquet consequat. Proin tempus, purus quis suscipit placerat, dui nunc euismod dui, sit amet luctus leo lectus in risus. Phasellus consectetur eleifend arcu. Nullam venenatis blandit nulla ut ullamcorper. Vestibulum eu arcu quis massa scelerisque sodales in ac augue. Quisque dapibus fringilla turpis, ut cursus tortor cursus sed. Sed facilisis quam eget neque viverra venenatis. Suspendisse ut lorem nec erat elementum bibendum. Curabitur lobortis purus in cursus blandit.
+### Normal Distribution
+
+Let's begin by making sure we can create a normal distribution in the app.
+
+```{r Normal Distribution}
+ui <- fluidPage(
+    titlePanel("Z-Distribution"),
+    mainPanel(plotOutput("distPlot"))
+)
+
+server <- function(input,output){
+  x <- seq(-4,4, length.out = 1e4)
+  y <- dnorm(x)
+  
+  dat <- data.frame( x = x, y = y) #Normal Dist. Data
+  
+    graph <- dat %>% ggplot(aes(x = x, y = y)) +
+    geom_line(color = "blue", linewidth = 1) +
+    ylab("Density") +
+    xlab("Z") + 
+    theme_classic() +
+    theme(axis.title = element_text(size = 20),
+          axis.text = element_text(size = 15))
+    
+    output$distPlot <- renderPlot({graph})
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
+```
+
+### Slider Input
+
+Perfect now let's add a slide input for the z-value as well as textoutput for the z-value. We will also shade in the p-value region and display the p-value.
+
+```{r slider Input}
+ui <- fluidPage(
+  
+  # Application title
+  titlePanel("Z-Distribution"),
+  
+  sidebarLayout(
+    sidebarPanel(
+      
+      sliderInput(inputId = "z",   #Sliding Bar
+                  label = "Z Value",
+                  min = -4,
+                  max = 4,
+                  value = 0,
+                  step = 0.01)
+    ),
+    
+    # Sidebar with a slider input for number of bins 
+    # Show a plot of the generated distribution
+    mainPanel(
+      plotOutput("distPlot"),
+      h4(textOutput("text1")),
+    )
+  )
+)
+
+server <- function(input, output) {
+  
+  x <- seq(-4,4, length.out = 1e4)
+  y <- dnorm(x)
+  
+  dat <- data.frame( x = x, y = y) #Normal Dist. Data
+  
+  graph<- dat %>% ggplot(aes(x = x, y = y)) +
+    geom_line(color = "blue", linewidth = 1) +
+    ylab("Density") +
+    xlab("Z") + 
+    theme_classic() +
+    theme(axis.title = element_text(size = 20),
+          axis.text = element_text(size = 15))
+  
+  shade = 0.5
+  
+  dottedlinesize = 1
+  
+
+  observe({
+    
+      x <- seq(input$z,4, length.out = 1e4)
+      y <- dnorm(x)
+      x <- c(x,rev(x))
+      y <- c(y,rep(0, 1e4))
+      
+      tail <- data.frame(x = x, y = y)
+      
+      graph <- graph + geom_polygon(data = tail,
+                                    fill = "#36b8f5", alpha = shade) 
+      
+      output$text2 <- renderText(
+        paste("P-value = ",
+              integrate(dnorm, input$z, Inf)$value %>% round(digits = 3) %>% as.character())
+      )
+
+      output$distPlot <- renderPlot({graph})
+      
+    })
+  
+  output$text1 <- renderText(
+            paste("-value = ",
+              input$z %>% round(digits = 3) %>% as.character())
+            
+  )
+
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
+```
+
+### Select Direction
+
+Alright now how about we specify the direction of our p-value.
+
+```{r select direction}
+ui <- fluidPage(
+  
+  # Application title
+  titlePanel("Z-Distribution"),
+  
+  sidebarLayout(
+    sidebarPanel(
+      
+      selectInput(inputId = "direction", 
+                  label = "Direction:",
+                  choices = list("Right Tail", "Left Tail", "Two-Tailed")),
+      
+      
+      sliderInput(inputId = "z",   #Sliding Bar
+                  label = "Z Value",
+                  min = -4,
+                  max = 4,
+                  value = 0,
+                  step = 0.01),
+    ),
+    
+    # Sidebar with a slider input for number of bins 
+    # Show a plot of the generated distribution
+    mainPanel(
+      plotOutput("distPlot"),
+      h4(textOutput("text1")),
+      h4(textOutput("text2"))
+    )
+  )
+)
+
+server <- function(input, output) {
+  
+  x <- seq(-4,4, length.out = 1e4)
+  y <- dnorm(x)
+  
+  dat <- data.frame( x = x, y = y) #Normal Dist. Data
+  
+  graph<- dat %>% ggplot(aes(x = x, y = y)) +
+    geom_line(color = "blue", linewidth = 1) +
+    ylab("Density") +
+    xlab("Z") + 
+    theme_classic() +
+    theme(axis.title = element_text(size = 20),
+          axis.text = element_text(size = 15))
+  
+  shade = 0.5
+  
+  dottedlinesize = 1
+  
+
+# Input Direction ---------------------------------------------------------
+
+  observe({
+    if(input$direction == "Right Tail"){
+      
+      x <- seq(input$z,4, length.out = 1e4)
+      y <- dnorm(x)
+      x <- c(x,rev(x))
+      y <- c(y,rep(0, 1e4))
+      
+      tail <- data.frame(x = x, y = y)
+      
+      graph <- graph + geom_polygon(data = tail,
+                                    fill = "#36b8f5", alpha = shade) 
+      
+      output$text2 <- renderText(
+        paste("P-value = ",
+              integrate(dnorm, input$z, Inf)$value %>% round(digits = 3) %>% as.character())
+      )
+
+      output$distPlot <- renderPlot({graph})
+    }
+    if(input$direction == "Left Tail"){
+      
+      x <- seq(input$z, -4, length.out = 1e4)
+      y <- dnorm(x)
+      x <- c(x,rev(x))
+      y <- c(y,rep(0, 1e4))
+      
+      tail <- data.frame(x = x, y = y)
+      
+      graph <- graph + geom_polygon(data = tail,
+                                    fill = "#36b8f5", alpha = shade)
+    
+      output$text2 <- renderText(
+        paste("P-value = ",
+              integrate(dnorm, -Inf, input$z)$value %>% round(digits = 3) %>% as.character())
+      )
+     
+      output$distPlot <- renderPlot({graph})
+    }
+
+    if(input$direction == "Two-Tailed"){
+      if (input$z >= 0){
+        
+        x <- seq(-input$z, -4, length.out = 1e4)
+        y <- dnorm(x)
+        x <- c(x,rev(x))
+        y <- c(y,rep(0, 1e4))
+        
+        tailL <- data.frame(x = x, y = y)
+        
+        
+        x <- seq(input$z, 4, length.out = 1e4)
+        y <- dnorm(x)
+        x <- c(x,rev(x))
+        y <- c(y,rep(0, 1e4))
+        
+        tailR <- data.frame(x = x, y = y)
+        
+        graph <- graph + 
+          geom_polygon(data = tailR,
+                       fill = "#36b8f5", alpha = shade) + 
+          geom_polygon(data = tailL,
+                       fill = "#36b8f5", alpha = shade)
+        
+        output$text2 <- renderText(
+          paste("P-value = ",
+                (integrate(dnorm, input$z, Inf)$value*2) %>% round(digits = 3) %>% as.character())
+        )
+        
+
+        output$distPlot <- renderPlot({graph})
+      }
+      
+      if (input$z < 0 ){
+        
+        x <- seq(input$z, -4, length.out = 1e4)
+        y <- dnorm(x)
+        x <- c(x,rev(x))
+        y <- c(y,rep(0, 1e4))
+        
+        tailL <- data.frame(x = x, y = y)
+        
+        
+        x <- seq(-input$z, 4, length.out = 1e4)
+        y <- dnorm(x)
+        x <- c(x,rev(x))
+        y <- c(y,rep(0, 1e4))
+        
+        tailR <- data.frame(x = x, y = y)
+        
+        graph <- graph + 
+          geom_polygon(data = tailR,
+                       fill = "#36b8f5", alpha = shade) + 
+          geom_polygon(data = tailL,
+                       fill = "#36b8f5", alpha = shade)
+        
+        output$text2 <- renderText(
+          paste("P-value = ",
+                (integrate(dnorm, -Inf, input$z)$value*2) %>% round(digits = 3) %>% as.character())
+        )
+        
+        output$distPlot <- renderPlot({graph})
+      }
+    }
+  })
+  
+  output$text1 <- renderText(
+    paste("Z-value = ", {input$z}))
+  
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
+```
+
+### Alpha Values
+
+Alright and now the last thing I want to introduce are alpha values or the rejection thresholds that are typical in a statistical test. I will make another select input widget for this as well. 
+
+```{r alpha values}
+#
+# This is a Shiny web application. You can run the application by clicking
+# the 'Run App' button above.
+#
+# Find out more about building applications with Shiny here:
+#
+#    http://shiny.rstudio.com/
+#
+
+library(shiny)
+library(tidyverse)
+library(rsconnect)
+library(ggpattern)
+
+# Define UI for application that draws a histogram
+ui <- fluidPage(
+  
+  # Application title
+  titlePanel("Z-Distribution"),
+  
+  sidebarLayout(
+    sidebarPanel(
+      
+      selectInput(inputId = "direction", 
+                  label = "Direction:",
+                  choices = list("Right Tail", "Left Tail", "Two-Tailed")),
+      
+      selectInput(inputId = "alpha",
+                  label = "Alpha:",
+                  choices = list("None", "0.05", "0.025")),
+      
+      sliderInput(inputId = "z",   #Sliding Bar
+                  label = "Z Value",
+                  min = -4,
+                  max = 4,
+                  value = 0,
+                  step = 0.01),
+    ),
+    
+    # Sidebar with a slider input for number of bins 
+    # Show a plot of the generated distribution
+    mainPanel(
+      plotOutput("distPlot"),
+      h4(textOutput("text1")),
+      h4(textOutput("text2"))
+    )
+  )
+)
+
+server <- function(input, output) {
+  
+  x <- seq(-4,4, length.out = 1e4)
+  y <- dnorm(x)
+  
+  dat <- data.frame( x = x, y = y) #Normal Dist. Data
+  
+  graph<- dat %>% ggplot(aes(x = x, y = y)) +
+    geom_line(color = "blue", linewidth = 1) +
+    ylab("Density") +
+    xlab("Z") + 
+    theme_classic() +
+    theme(axis.title = element_text(size = 20),
+          axis.text = element_text(size = 15))
+  
+  shade = 0.5
+  
+  dottedlinesize = 1
+  
+
+# Input Direction ---------------------------------------------------------
+
+  observe({
+    if(input$direction == "Right Tail"){
+      
+      x <- seq(input$z,4, length.out = 1e4)
+      y <- dnorm(x)
+      x <- c(x,rev(x))
+      y <- c(y,rep(0, 1e4))
+      
+      tail <- data.frame(x = x, y = y)
+      
+      graph <- graph + geom_polygon(data = tail,
+                                    fill = "#36b8f5", alpha = shade) 
+      
+      output$text2 <- renderText(
+        paste("P-value = ",
+              integrate(dnorm, input$z, Inf)$value %>% round(digits = 3) %>% as.character())
+      )
+      if(input$alpha == 0.05){
+        al.L <- data.frame(x = c(1.645, 1.645), y = c(0, dnorm(1.645)))
+        
+        stripes <- data.frame(x = seq(1.645,))
+        graph <- graph + 
+          geom_line(data = al.L, aes(x = x, y = y), 
+                                   color = "red", linetype = "dashed", 
+                                   linewidth = dottedlinesize)
+      }
+      if(input$alpha == 0.025){
+        al.L <- data.frame(x = c(1.96, 1.96), y = c(0, dnorm(1.96)))
+        graph <- graph + geom_line(data = al.L, aes(x = x, y = y),
+                                   color = "red", linetype = "dashed",
+                                   linewidth = dottedlinesize)
+      }
+
+      output$distPlot <- renderPlot({graph})
+    }
+    if(input$direction == "Left Tail"){
+      
+      x <- seq(input$z, -4, length.out = 1e4)
+      y <- dnorm(x)
+      x <- c(x,rev(x))
+      y <- c(y,rep(0, 1e4))
+      
+      tail <- data.frame(x = x, y = y)
+      
+      graph <- graph + geom_polygon(data = tail,
+                                    fill = "#36b8f5", alpha = shade)
+    
+      output$text2 <- renderText(
+        paste("P-value = ",
+              integrate(dnorm, -Inf, input$z)$value %>% round(digits = 3) %>% as.character())
+      )
+      
+      if(input$alpha == 0.05){
+        al.L <- data.frame(x = c(-1.645, -1.645), y = c(0, dnorm(-1.645)))
+        graph <- graph + geom_line(data = al.L, aes(x = x, y = y),
+                                   color = "red", linetype = "dashed",
+                                   linewidth = dottedlinesize)
+      }
+      if(input$alpha == 0.025){
+        al.L <- data.frame(x = c(-1.96, -1.96), y = c(0, dnorm(-1.96)))
+        graph <- graph + geom_line(data = al.L, aes(x = x, y = y),
+                                   color = "red", linetype = "dashed",
+                                   linewidth = dottedlinesize)
+      }
+     
+      output$distPlot <- renderPlot({graph})
+    }
+
+    if(input$direction == "Two-Tailed"){
+      if (input$z >= 0){
+        
+        x <- seq(-input$z, -4, length.out = 1e4)
+        y <- dnorm(x)
+        x <- c(x,rev(x))
+        y <- c(y,rep(0, 1e4))
+        
+        tailL <- data.frame(x = x, y = y)
+        
+        
+        x <- seq(input$z, 4, length.out = 1e4)
+        y <- dnorm(x)
+        x <- c(x,rev(x))
+        y <- c(y,rep(0, 1e4))
+        
+        tailR <- data.frame(x = x, y = y)
+        
+        graph <- graph + 
+          geom_polygon(data = tailR,
+                       fill = "#36b8f5", alpha = shade) + 
+          geom_polygon(data = tailL,
+                       fill = "#36b8f5", alpha = shade)
+        
+        output$text2 <- renderText(
+          paste("P-value = ",
+                (integrate(dnorm, input$z, Inf)$value*2) %>% round(digits = 3) %>% as.character())
+        )
+        
+        if(input$alpha == 0.05){
+          al.L <- data.frame(x = c(-1.96, -1.96), y = c(0, dnorm(-1.96)))
+          al.R <- data.frame(x = c(1.96, 1.96), y = c(0, dnorm(1.96)))
+          graph <- graph + 
+            geom_line(data = al.L, aes(x = x, y = y),
+                      color = "red", linetype = "dashed",
+                      linewidth = dottedlinesize) +
+            geom_line(data = al.R, aes(x = x, y = y),
+                      color = "red", linetype = "dashed",
+                      linewidth = dottedlinesize) 
+        }
+        if(input$alpha == 0.025){
+          al.L <- data.frame(x = c(-2.24, -2.24), y = c(0, dnorm(-2.24)))
+          al.R <- data.frame(x = c(2.24, 2.24), y = c(0, dnorm(2.24)))
+          graph <- graph + 
+            geom_line(data = al.L, aes(x = x, y = y),
+                      color = "red", linetype = "dashed",
+                      linewidth = dottedlinesize) +
+            geom_line(data = al.R, aes(x = x, y = y),
+                      color = "red", linetype = "dashed",
+                      linewidth = dottedlinesize)
+        }
+
+        output$distPlot <- renderPlot({graph})
+      }
+      
+      if (input$z < 0 ){
+        
+        x <- seq(input$z, -4, length.out = 1e4)
+        y <- dnorm(x)
+        x <- c(x,rev(x))
+        y <- c(y,rep(0, 1e4))
+        
+        tailL <- data.frame(x = x, y = y)
+        
+        
+        x <- seq(-input$z, 4, length.out = 1e4)
+        y <- dnorm(x)
+        x <- c(x,rev(x))
+        y <- c(y,rep(0, 1e4))
+        
+        tailR <- data.frame(x = x, y = y)
+        
+        graph <- graph + 
+          geom_polygon(data = tailR,
+                       fill = "#36b8f5", alpha = shade) + 
+          geom_polygon(data = tailL,
+                       fill = "#36b8f5", alpha = shade)
+        
+        output$text2 <- renderText(
+          paste("P-value = ",
+                (integrate(dnorm, -Inf, input$z)$value*2) %>% round(digits = 3) %>% as.character())
+        )
+        
+        if(input$alpha == 0.05){
+          al.L <- data.frame(x = c(-1.96, -1.96), y = c(0, dnorm(-1.96)))
+          al.R <- data.frame(x = c(1.96, 1.96), y = c(0, dnorm(1.96)))
+          
+          graph <- graph + 
+            geom_line(data = al.L, aes(x = x, y = y),
+                      color = "red", linetype = "dashed",
+                      linewidth = dottedlinesize) +
+            geom_line(data = al.R, aes(x = x, y = y),
+                      color = "red", linetype = "dashed",
+                      linewidth = dottedlinesize) 
+        }
+        if(input$alpha == 0.025){
+          al.L <- data.frame(x = c(-2.24, -2.24), y = c(0, dnorm(-2.24)))
+          al.R <- data.frame(x = c(2.24, 2.24), y = c(0, dnorm(2.24)))
+          graph <- graph + 
+            geom_line(data = al.L, aes(x = x, y = y),
+                      color = "red", linetype = "dashed",
+                      linewidth = dottedlinesize) +
+            geom_line(data = al.R, aes(x = x, y = y),
+                      color = "red", linetype = "dashed",
+                      linewidth = dottedlinesize)
+        }
+        
+        output$distPlot <- renderPlot({graph})
+      }
+    }
+  })
+  
+  output$text1 <- renderText(
+    paste("Z-value = ", {input$z}))
+  
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
+```
+
+Ta da! An easy to use z-distribution that Eric can use!
+
+As a matter of fact. Here is a link to the finished product!
+
+https://conorhlacey.shinyapps.io/normal-distribution-app/
 

@@ -13,7 +13,7 @@
 
 <title>Portfolio 3</title>
 
-<script src="site_libs/header-attrs-2.13/header-attrs.js"></script>
+<script src="site_libs/header-attrs-2.20/header-attrs.js"></script>
 <script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="site_libs/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
@@ -141,11 +141,15 @@ $(document).ready(function () {
     href = "index.html";
   var menuAnchor = $('a[href="' + href + '"]');
 
-  // mark it active
-  menuAnchor.tab('show');
-
-  // if it's got a parent navbar menu mark it active as well
-  menuAnchor.closest('li.dropdown').addClass('active');
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
 
   // Navbar adjustments
   var navHeight = $(".navbar").first().height() + 15;
@@ -174,8 +178,8 @@ $(document).ready(function () {
   border-radius: 4px;
 }
 
-.tabset-dropdown > .nav-tabs > li.active:before {
-  content: "";
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
   font-family: 'Glyphicons Halflings';
   display: inline-block;
   padding: 10px;
@@ -183,16 +187,9 @@ $(document).ready(function () {
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
-  content: "&#xe258;";
-  border: none;
-}
-
-.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
-  content: "";
+  content: "\e258";
   font-family: 'Glyphicons Halflings';
-  display: inline-block;
-  padding: 10px;
-  border-right: 1px solid #ddd;
+  border: none;
 }
 
 .tabset-dropdown > .nav-tabs > li.active {
@@ -249,9 +246,6 @@ $(document).ready(function () {
   <a href="index.html">Home</a>
 </li>
 <li>
-  <a href="about.html">About</a>
-</li>
-<li>
   <a href="p01.html">Portfolio 1</a>
 </li>
 <li>
@@ -298,13 +292,136 @@ $(document).ready(function () {
 </div>
 
 
-<blockquote>
-<p>The projects should be numbered consecutively (i.e., in the order in
-which you began them), and should include for each project a description
-of the goal, the product (computer program, hand graph, computer graph,
-etc.), the data, and some interpretation. Reports must be reproducible
-and of high quality in terms of writing, grammar, presentation, etc.</p>
-</blockquote>
+<pre class="r"><code>suppressWarnings(library(tidyverse))</code></pre>
+<pre><code>## ── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+## ✔ dplyr     1.1.0     ✔ readr     2.1.4
+## ✔ forcats   1.0.0     ✔ stringr   1.5.0
+## ✔ ggplot2   3.4.1     ✔ tibble    3.2.1
+## ✔ lubridate 1.9.2     ✔ tidyr     1.3.0
+## ✔ purrr     1.0.1     
+## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+## ✖ dplyr::filter() masks stats::filter()
+## ✖ dplyr::lag()    masks stats::lag()
+## ℹ Use the ]8;;http://conflicted.r-lib.org/conflicted package]8;; to force all conflicts to become errors</code></pre>
+<div id="introduction" class="section level3">
+<h3>Introduction</h3>
+<p>This portfolio is a continuation of my previous one. In this one I
+want to make graphics that show how exactly the prior and posterior
+distribution should look for the spike and the slab.</p>
+</div>
+<div id="the-spike" class="section level3">
+<h3>The Spike</h3>
+<p>The spike’s prior is simply the probability of the effect (in the
+case of my thesis, this would be dMACS) being zero. Since we weight the
+spike prior equally to the slab, this should simply be a straight
+vertical line at 0 with length of 0.5. The y-axis represents the
+probability</p>
+<pre class="r"><code>spike_prior &lt;- tribble(~dMACS, ~Density,
+                       0, 0,
+                       0, 0.5)
+
+spike_prior_graph &lt;- spike_prior %&gt;% ggplot(aes(x=dMACS,y=Density))+
+  geom_line(color = &quot;blue&quot;, linewidth = 1.5, alpha = 0.5) +
+  xlim(-4,4)
+spike_prior_graph</code></pre>
+<p><img src="p03_files/figure-html/spike-prior-1.png" width="672" /></p>
+<p>Ok this is good, but now let’s show what happens when we present data
+that in favor of it, that is the probability of the effect being zero
+increases a bit. ### Calculating dMACS</p>
+<pre class="r"><code>spike_post &lt;- tribble(~dMACS, ~Density,
+                            0, 0,
+                            0, 0.52)
+
+spike_post_graph &lt;- spike_post %&gt;% ggplot(aes(x=dMACS,y=Density))+
+  geom_line(color = &quot;blue&quot;, linewidth = 1.5, alpha = 0.5) +
+  xlim(-4,4)
+spike_post_graph</code></pre>
+<p><img src="p03_files/figure-html/spike-posterior-1.png" width="672" /></p>
+<p>Now of course this all doesn’t look too interesting, all I did was
+increase the height of the line. However, now I will show the prior and
+posterior DISTRIBUTION of the slab and this is where things start to
+look cool.</p>
+</div>
+<div id="the-slab" class="section level3">
+<h3>The Slab</h3>
+<p>The slab-prior is quite easy. It is just a normal distribution
+centered at 0 and with standard deviation of 1.</p>
+<pre class="r"><code>x&lt;-seq(-4,4, length.out = 1e4)
+y&lt;-dnorm(x)
+y&lt;-y/max(y)*(.5)
+slab_prior &lt;- tibble(x = x, y = y)
+
+graph_prior_graph&lt;-slab_prior %&gt;% ggplot(aes(x=x,y=y))+
+  geom_line(alpha=0.5, color = &quot;red&quot;, linewidth = 1.5) + 
+  labs (title = &quot;Prior Slab&quot;,
+        x = &quot;dMACS&quot;,
+        y = &quot;Density&quot;)
+graph_prior_graph</code></pre>
+<p><img src="p03_files/figure-html/slab-prior-1.png" width="672" /></p>
+<p>Again nothing new, just a normal distribution. However, what if we
+introduce data that shows that the effect size is not 0 and there is
+actually an effect occuring. If this is the case, then we should update
+our prior distribution of the slab. In this case let’s assume we
+calculated a new posterior distribution that is N(.29,.14).</p>
+<pre class="r"><code>x&lt;-seq(-4,4, length.out = 1e4)
+y&lt;-dnorm(x,.29,.14)
+y&lt;- y/max(y)*(.47)
+slab_post &lt;- tibble(x = x, y = y)
+
+slab_post_graph &lt;- slab_post %&gt;% ggplot(aes(x=x,y=y)) + 
+    geom_line(alpha=0.5, color = &quot;red&quot;, linewidth = 1.5) +
+    labs (title = &quot;Posterior Slab&quot;,
+          x = &quot;dMACS&quot;,
+          y = &quot;Density&quot;)
+slab_post_graph + 
+  xlim(-1,1) +
+  ylim(0,0.5)</code></pre>
+<pre><code>## Warning: Removed 7500 rows containing missing values (`geom_line()`).</code></pre>
+<p><img src="p03_files/figure-html/slab-posterior-1.png" width="672" /></p>
+<p>Wow! Look at that. Clearly there is a change once new data is
+introduced. The data errs on the side that there is an effect, therefore
+the posterior distribution is to the right of zero. The data also
+becomes less spread if you notice the y-axis. You should also notice
+that its height has decreased. This is because we are also updating the
+prior probability of there being an effect which is just 1 minus the
+posterior probabilty of there being no effect.</p>
+</div>
+<div id="prior-spike-and-slab" class="section level3">
+<h3>Prior Spike and Slab</h3>
+<p>Ok well now I have quite a lot of graphs here, but perhaps it might
+be useful to also display the graphs with the spike and the slab. I
+shall make two graphs, one with the prior spike and slab and one with
+the posterior spike and slab.</p>
+<pre class="r"><code>  ggplot() +
+  geom_line(data = spike_prior, aes(x=dMACS,y=Density, color = &quot;Spike&quot;),
+            alpha=0.5, linewidth = 1.5) + 
+  geom_line(data = slab_prior, aes(x=x,y=y, color = &quot;Slab&quot;),
+            alpha=0.5, linewidth = 1.5) + 
+  labs (title = &quot;Prior Spike and Slab&quot;,
+        x = &quot;dMACS&quot;,
+        y = &quot;Density&quot;,
+        color = &quot;&quot;) + 
+  scale_color_manual(values = c(&quot;Slab&quot; = &quot;red&quot;, &quot;Spike&quot; = &quot;blue&quot; )) +
+  xlim(-4,4)</code></pre>
+<p><img src="p03_files/figure-html/prior-spike_and_slab-1.png" width="672" /></p>
+<p>Good. Now let’s make the posterior.</p>
+</div>
+<div id="posterior-spike-and-slab" class="section level3">
+<h3>Posterior Spike and Slab</h3>
+<pre class="r"><code>  ggplot() +
+  geom_line(data = spike_post, aes(x=dMACS,y=Density, color = &quot;Spike&quot;),
+            alpha=0.5, linewidth = 1.5) + 
+  geom_line(data = slab_post, aes(x=x,y=y, color = &quot;Slab&quot;),
+            alpha=0.5, linewidth = 1.5) + 
+  labs (title = &quot;Posterior Spike and Slab&quot;,
+        x = &quot;dMACS&quot;,
+        y = &quot;Density&quot;,
+        color = &quot;&quot;) + 
+  scale_color_manual(values = c(&quot;Slab&quot; = &quot;red&quot;, &quot;Spike&quot; = &quot;blue&quot; )) +
+  xlim(-1,1)</code></pre>
+<pre><code>## Warning: Removed 7500 rows containing missing values (`geom_line()`).</code></pre>
+<p><img src="p03_files/figure-html/posterior-spike_and_slab-1.png" width="672" /></p>
+</div>
 
 
 

@@ -13,7 +13,7 @@
 
 <title>Portfolio 8</title>
 
-<script src="site_libs/header-attrs-2.13/header-attrs.js"></script>
+<script src="site_libs/header-attrs-2.20/header-attrs.js"></script>
 <script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="site_libs/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
@@ -141,11 +141,15 @@ $(document).ready(function () {
     href = "index.html";
   var menuAnchor = $('a[href="' + href + '"]');
 
-  // mark it active
-  menuAnchor.tab('show');
-
-  // if it's got a parent navbar menu mark it active as well
-  menuAnchor.closest('li.dropdown').addClass('active');
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
 
   // Navbar adjustments
   var navHeight = $(".navbar").first().height() + 15;
@@ -174,8 +178,8 @@ $(document).ready(function () {
   border-radius: 4px;
 }
 
-.tabset-dropdown > .nav-tabs > li.active:before {
-  content: "";
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
   font-family: 'Glyphicons Halflings';
   display: inline-block;
   padding: 10px;
@@ -183,16 +187,9 @@ $(document).ready(function () {
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
-  content: "&#xe258;";
-  border: none;
-}
-
-.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
-  content: "";
+  content: "\e258";
   font-family: 'Glyphicons Halflings';
-  display: inline-block;
-  padding: 10px;
-  border-right: 1px solid #ddd;
+  border: none;
 }
 
 .tabset-dropdown > .nav-tabs > li.active {
@@ -249,9 +246,6 @@ $(document).ready(function () {
   <a href="index.html">Home</a>
 </li>
 <li>
-  <a href="about.html">About</a>
-</li>
-<li>
   <a href="p01.html">Portfolio 1</a>
 </li>
 <li>
@@ -298,13 +292,145 @@ $(document).ready(function () {
 </div>
 
 
-<blockquote>
-<p>The projects should be numbered consecutively (i.e., in the order in
-which you began them), and should include for each project a description
-of the goal, the product (computer program, hand graph, computer graph,
-etc.), the data, and some interpretation. Reports must be reproducible
-and of high quality in terms of writing, grammar, presentation, etc.</p>
-</blockquote>
+<pre class="r"><code>suppressWarnings(library(tidyverse))</code></pre>
+<pre><code>## ── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+## ✔ dplyr     1.1.0     ✔ readr     2.1.4
+## ✔ forcats   1.0.0     ✔ stringr   1.5.0
+## ✔ ggplot2   3.4.1     ✔ tibble    3.2.1
+## ✔ lubridate 1.9.2     ✔ tidyr     1.3.0
+## ✔ purrr     1.0.1     
+## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+## ✖ dplyr::filter() masks stats::filter()
+## ✖ dplyr::lag()    masks stats::lag()
+## ℹ Use the ]8;;http://conflicted.r-lib.org/conflicted package]8;; to force all conflicts to become errors</code></pre>
+<pre class="r"><code>suppressWarnings(library(gganimate))
+suppressWarnings(library(transformr))</code></pre>
+<div id="introduction" class="section level3">
+<h3>Introduction</h3>
+<p>In this portfolio I am now going to animate a spike and slab graph to
+demonstrate how this graph updates with new information. This will be
+very similar to my previous portfolio except now I’m working with two
+priors (i.e., the spike and the slab).</p>
+</div>
+<div id="what-does-it-look-like" class="section level3">
+<h3>What does it look like?</h3>
+<p>It is a good idea to first look at what exactly we are trying to
+create.</p>
+<p><img src="SpikeSlabPlot.png" width="406" /></p>
+<p>I should note that we are looking at currently is the posterior
+distribution of the spike-and-slab plot graph looks like. There is a
+prior that this graph shifts from.</p>
+</div>
+<div id="prior-spike-and-slab" class="section level3">
+<h3>Prior Spike-and-Slab</h3>
+<pre class="r"><code>spike_prior &lt;- tribble(~dMACS, ~Density,
+                       0, 0,
+                       0, 0.5)
+
+x&lt;-seq(-4,4, length.out = 1e4)
+y&lt;-dnorm(x)
+y&lt;-y/max(y)*(.5)
+slab_prior &lt;- tibble(dMACS = x, Density = y)
+
+ ggplot() +
+  geom_line(data = spike_prior, aes(x=dMACS,y=Density, color = &quot;Spike&quot;),
+            alpha=0.5, linewidth = 1.5) + 
+  geom_line(data = slab_prior, aes(x=dMACS,y=Density, color = &quot;Slab&quot;),
+            alpha=0.5, linewidth = 1.5) + 
+  labs (title = &quot;Prior Spike and Slab&quot;,
+        x = &quot;dMACS&quot;,
+        y = &quot;Density&quot;,
+        color = &quot;&quot;) + 
+  scale_color_manual(values = c(&quot;Slab&quot; = &quot;red&quot;, &quot;Spike&quot; = &quot;blue&quot; )) +
+  xlim(-4,4)</code></pre>
+<p><img src="p08_files/figure-html/Prior%20Spike-and-Slab-1.png" width="672" /></p>
+<p>You’ll notice this is the same graph from portfolio 3.</p>
+</div>
+<div id="posterior-spike-and-slab" class="section level3">
+<h3>Posterior Spike-and-Slab</h3>
+<p>Now let’s code the posterior spike-and-slab.</p>
+<pre class="r"><code>spike_prior &lt;- tribble(~dMACS, ~Density,
+                       0, 0,
+                       0, 0.6)
+
+x&lt;-seq(-4,4, length.out = 1e4)
+y&lt;-dnorm(x, mean = 2, sd = 0.5)
+y&lt;-y/max(y)*(.4)
+slab_prior &lt;- tibble(dMACS = x, Density = y)
+
+ ggplot() +
+  geom_line(data = spike_prior, aes(x=dMACS,y=Density, color = &quot;Spike&quot;),
+            alpha=0.5, linewidth = 1.5) + 
+  geom_line(data = slab_prior, aes(x=dMACS,y=Density, color = &quot;Slab&quot;),
+            alpha=0.5, linewidth = 1.5) + 
+  labs (title = &quot;Posterior Spike and Slab&quot;,
+        x = &quot;dMACS&quot;,
+        y = &quot;Density&quot;,
+        color = &quot;&quot;) + 
+  scale_color_manual(values = c(&quot;Slab&quot; = &quot;red&quot;, &quot;Spike&quot; = &quot;blue&quot; )) +
+  xlim(-4,4)</code></pre>
+<p><img src="p08_files/figure-html/post%20spike-and-slab-1.png" width="672" /></p>
+<p>Perfect! You’ll notice also how the spike and slab heights change
+from the prior. This is mean to represent their competing probabilities
+of being true (i.e., the probability of the null versus the alternative
+being true). This will also need to be animated.</p>
+<p>Now let’s create an animation that shifts the prior spike-and-slab
+graph to the posterior spike-and-slab graph.</p>
+</div>
+<div id="animate" class="section level3">
+<h3>Animate</h3>
+<p>Using the same method we used in portfolio 7 we shall animate the
+shift from the prior to the posterior spike-and-slab graph.</p>
+<pre class="r"><code>a &lt;- seq(0, 2, length = 100)
+b &lt;- seq(1, .5, length = 100)
+c &lt;- seq(.5,.4, length = 100)
+
+prior_post_slab&lt;- data.frame(x = 0, y = 0, frame = 0)
+for (i in 1:100){
+  x&lt;-seq(-4,4, length.out = 1e4)
+  y&lt;-dnorm(x, a[i], b[i])
+  y&lt;-y/max(y)*(c[i]) # this will gradually decrease the height of slab as the frames increase
+  dat &lt;- tibble(x = x, y = y, frame = i)
+  prior_post_slab &lt;- bind_rows(prior_post_slab, dat)
+}
+prior_post_slab &lt;- prior_post_slab[-1,]
+
+spike.x &lt;- rep(0,200)
+a &lt;- seq(.5,.6, length =100)
+frame &lt;- c(seq(1:100))
+
+prior_post_spike &lt;- data.frame(spike.y = 0, frame = 0)
+for (i in 1:100){
+  b &lt;- 0
+  c &lt;- a[i] # this will gradually increase the height of the spike as the frames increase
+  dat &lt;- data.frame(spike.y = c(b,c), frame = i)
+  prior_post_spike &lt;- bind_rows(prior_post_spike, dat)
+}
+prior_post_spike &lt;- prior_post_spike[-1,]
+prior_post_spike &lt;- bind_cols(spike.x = spike.x, prior_post_spike)
+
+
+ggplot() + 
+  geom_line(data = prior_post_slab,
+            aes(x=x,y=y),alpha=0.5, 
+            linewidth = 2, color = &quot;#4169E1&quot;) +
+  geom_line(data = prior_post_spike,
+            aes(x = spike.x, y = spike.y), 
+            alpha = 0.5, linewidth = 2, color = &quot;red&quot;) +
+  #Animation
+  labs (title = &quot;Amount of Prior Knowledge = {frame_time}%&quot;,
+        x = &quot;dMACS&quot;,
+        y = &quot;Density&quot;) + 
+  transition_time(frame) + 
+  ease_aes(&#39;linear&#39;) </code></pre>
+<p><img src="p08_files/figure-html/Animate-1.gif" /><!-- --></p>
+<p>There we have it! Now of course it is possible that the height of the
+slab and spike could be reversed such that the height of slab increases
+and the height of the spike decreases with more prior information.
+However, for the purposes of this example we assume that with more
+information the spike becomes more probable and the slab becomes less
+probable.</p>
+</div>
 
 
 

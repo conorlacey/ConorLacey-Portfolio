@@ -1,82 +1,68 @@
 ---
-title: "Introduction to Multilevel Modeling with the Tidyverse"
+title: "Portfolio 6"
 ---
 
-> The projects should be numbered consecutively (i.e., in the order in which you began them), and should include for each project a description of the goal, the product (computer program, hand graph, computer graph, etc.), the data, and some interpretation. Reports must be reproducible and of high quality in terms of writing, grammar, presentation, etc.
-
-# Title: Introduction to Multilevel Modeling with the Tidyverse
-
-## Objective: This lab will provide an introduction to multilevel modeling using the Tidyverse package in R.
-
-# Lab Overview
-In this lab, you will learn how to perform multilevel modeling using R and the Tidyverse package. Multilevel modeling, also known as hierarchical linear modeling or mixed-effects modeling, is a statistical technique used to analyze data that has a hierarchical or nested structure. We will explore multilevel modeling through a practical example.
-
-# Prerequisites
-Basic knowledge of R programming
-Familiarity with the Tidyverse package
-Understanding of linear regression and mixed-effects models
-Installing Required Packages
-First, we need to install the required packages. If you haven't installed them yet, run the following commands:
-
-
-```{r}
-install.packages("tidyverse")
-install.packages("lme4")
-install.packages("lmerTest")
+```{r library}
+suppressWarnings(library(tidyverse))
 ```
 
-Loading Required Packages
-Now, let's load the required packages.
+### Introduction
 
-```{r}
-library(tidyverse)
-library(lme4)
-library(lmerTest)
-```
-Loading the Dataset
-For this lab, we will use a built-in dataset from the lme4 package called sleepstudy. This dataset contains information about the reaction times of subjects who participated in a sleep deprivation study.
+In this portfolio I will be doing some analysis of the previously generated simulation data from portfolio 5. 
 
-```{r}
-data("sleepstudy")
-head(sleepstudy)
+### Read in data 
 
-```
-Data Exploration
-Let's explore the structure of the dataset.
+To begin I will first need to read in the data. Fortunately, I changed the previous portfolio so that is exports the data as .RDS files because these are actual R files that make it more compatible for analysis work in R naturally. 
 
-```{r}
-glimpse(sleepstudy)
-```
-Visualizing the Data
-Before building the multilevel model, it's helpful to visualize the data. Let's plot the reaction times against the days of sleep deprivation, with each subject represented by a different color.
+```{r read data}
+dMACS <- read_rds("data/dat_dMACS.RDS")
+dMACS_low <- read_rds("data/dat_dMACS_low.RDS")
+dMACS_high <- read_rds("data/dat_dMACS_high.RDS")
 
-```{r}
-sleepstudy %>%
-  ggplot(aes(x = Days, y = Reaction, group = Subject, color = factor(Subject))) +
-  geom_line() +
-  labs(title = "Reaction Time vs Days of Sleep Deprivation",
-       x = "Days of Sleep Deprivation",
-       y = "Reaction Time (ms)",
-       color = "Subject")
-```
-       
-Building the Multilevel Model
-Now we will build a multilevel model using the lmer() function from the lme4 package. The model will predict the reaction time based on the number of days of sleep deprivation, while accounting for the random effects of subjects.
-
-```{r}
-multilevel_model <- lmer(Reaction ~ Days + (1|Subject), data = sleepstudy)
-summary(multilevel_model)
+dMACS_S <- read_rds("data/dat_dMACS_S.RDS")
+dMACS_s_low <- read_rds("data/dat_dMACS_S_low.RDS")
+dMACS_s_high <- read_rds("data/dat_dMACS_S_high.RDS")
 ```
 
-Model Interpretation
-The output provides information on the fixed effects, random effects, and model fit. We can interpret the fixed effects coefficients and significance levels to understand the relationship between reaction time and days of sleep deprivation.
+You may also notice that there are some new data files that I didn't include in my previous portfolio. These new files with the words "low" and "high" are the confidence and credible intervals of the generated data. This will be useful in assessing how often there is possible effect size of zero.
 
-Model Diagnostics
-We can perform model diagnostics using the plot() function, which will generate residual plots.
+### Mean of Columns 
 
-```{r}
-plot(multilevel_model)
+Now because I generated the data over 500 times I now want to average that data in each of the 54 conditions. This is fairly easy in R by simply using the colMeans() function since each column is one condition. I will then transpose this data so that the conditions then become the rows.
+```{r column data}
+dMACS_a <- dMACS %>% colMeans() %>% data.frame()
+dMACS_low_a <- dMACS_low %>% colMeans() %>% data.frame()
+dMACS_high_a <- dMACS_high %>% colMeans() %>% data.frame()
+dMACS_df <- bind_cols(dMACS_a, dMACS_low_a, dMACS_high_a) %>% 
+  setNames(c("dMACS", "Lower", "Upper"))
+head(dMACS_df)
+
+dMACS_S_a <- dMACS_S %>% colMeans() %>% data.frame()
+dMACS_s_low_a <- dMACS_s_low %>% colMeans() %>% data.frame()
+dMACS_s_high_a <- dMACS_s_high %>% colMeans() %>% data.frame()
+dMACS_S_df <- bind_cols(dMACS_S_a, dMACS_s_low_a, dMACS_s_high_a) %>% 
+  setNames(c("dMACS_S", "Lower", "Upper"))
+head(dMACS_S_df)
 ```
 
-Conclusion
-In this lab, you learned how to perform multilevel modeling using R and the Tidyverse package. You explored a real dataset, visualized the data, built a multilevel model, and interpreted the results.
+### Proportion of Estimates with No Effects
+
+The last thing I will be doing this analysis is calculating the the percent of estimates that include zero in their confidence or credible interval. If they do, this is an indication that an effect size of zero is within reason. Effectively what this analysis will tell me is how often there is truly a zero effect.
+
+As I did previously, the data frame generated here will have 54 rows representing the conditions.
+
+```{r}
+props <- matrix(nrow = 54, ncol = 1) %>% data.frame() %>% 
+  setNames(c("Percent"))
+for (i in 1:54){
+props[i,1] <- sum((dMACS_low[i] <= 0 & dMACS_high[i] >= 0)/500)*100
+}
+head(props)
+
+props_shrunk <- matrix(nrow = 54, ncol = 1) %>% data.frame() %>% 
+  setNames(c("Percent"))
+for (i in 1:54){
+  props_shrunk[i,1] <- sum((dMACS_s_low[i] <= 0 & dMACS_s_high[i] >= 0)/500)*100
+}
+head(props_shrunk)
+```

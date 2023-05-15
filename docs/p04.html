@@ -13,7 +13,7 @@
 
 <title>Portfolio 4</title>
 
-<script src="site_libs/header-attrs-2.13/header-attrs.js"></script>
+<script src="site_libs/header-attrs-2.20/header-attrs.js"></script>
 <script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="site_libs/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
@@ -141,11 +141,15 @@ $(document).ready(function () {
     href = "index.html";
   var menuAnchor = $('a[href="' + href + '"]');
 
-  // mark it active
-  menuAnchor.tab('show');
-
-  // if it's got a parent navbar menu mark it active as well
-  menuAnchor.closest('li.dropdown').addClass('active');
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
 
   // Navbar adjustments
   var navHeight = $(".navbar").first().height() + 15;
@@ -174,8 +178,8 @@ $(document).ready(function () {
   border-radius: 4px;
 }
 
-.tabset-dropdown > .nav-tabs > li.active:before {
-  content: "";
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
   font-family: 'Glyphicons Halflings';
   display: inline-block;
   padding: 10px;
@@ -183,16 +187,9 @@ $(document).ready(function () {
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
-  content: "&#xe258;";
-  border: none;
-}
-
-.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
-  content: "";
+  content: "\e258";
   font-family: 'Glyphicons Halflings';
-  display: inline-block;
-  padding: 10px;
-  border-right: 1px solid #ddd;
+  border: none;
 }
 
 .tabset-dropdown > .nav-tabs > li.active {
@@ -249,9 +246,6 @@ $(document).ready(function () {
   <a href="index.html">Home</a>
 </li>
 <li>
-  <a href="about.html">About</a>
-</li>
-<li>
   <a href="p01.html">Portfolio 1</a>
 </li>
 <li>
@@ -298,13 +292,150 @@ $(document).ready(function () {
 </div>
 
 
-<blockquote>
-<p>The projects should be numbered consecutively (i.e., in the order in
-which you began them), and should include for each project a description
-of the goal, the product (computer program, hand graph, computer graph,
-etc.), the data, and some interpretation. Reports must be reproducible
-and of high quality in terms of writing, grammar, presentation, etc.</p>
-</blockquote>
+<div id="introduction" class="section level3">
+<h3>Introduction</h3>
+<p>This portfolio will demonstrate how dMACS shrunk works with code.</p>
+</div>
+<div id="create-invariant-items" class="section level3">
+<h3>Create invariant items</h3>
+<pre class="r"><code>set.seed(55555)
+
+library(dmacs)
+
+eta &lt;- seq(-1000,1000, by = 10) #Generate true scores
+load.R &lt;- .6 #loading for the reference group
+load.F &lt;- 1.2 #loading for focal group
+int.R &lt;- 0 #intercept for reference group
+int.F &lt;- 1 #intercept for focal group
+
+y.R &lt;- load.R*eta + int.R #model-implied scores for reference group
+y.F &lt;- load.F*eta + int.F #model-implied scores for focal group
+
+sd.pooled.test.num &lt;- ((length(y.R)-1)*sd(y.R)) + ((length(y.F)-1)*sd(y.F)) 
+sd.pooled.test.denom &lt;- (length(y.R) - 1) + (length(y.F) - 1)
+sd.pooled.test &lt;- sd.pooled.test.num/sd.pooled.test.denom</code></pre>
+</div>
+<div id="calculate-initial-observed-dmacs" class="section level3">
+<h3>Calculate initial observed dMACS</h3>
+<p>The method I demonstrate here is the method created by Nye &amp;
+Drasgow, (2011)</p>
+<pre class="r"><code>item_dmacs(.6, #loading, R 
+      1.2, #loading, F
+      0, #intercept, R
+      1, #intercept, F
+      mean(eta), #mean (both groups)
+      var(eta), #variance (both groups, but it would be the focal group if they didn&#39;t have the same variance)
+      sd.pooled.test #pooled standard deviation (again, this is basically arbitrary)
+      )</code></pre>
+<pre><code>## [1] 0.6666694</code></pre>
+</div>
+<div id="update-parameter" class="section level3">
+<h3>Update Parameter</h3>
+<p>Ok now I will define some function’s from Bergh et al., (2021).</p>
+<pre class="r"><code>get.dMACS &lt;- function(outcome.R, outcome.F, eta = Eta) {
+  lm.R &lt;- lm(outcome.R ~ eta)$coefficients
+  lm.F &lt;- lm(outcome.F ~ eta)$coefficients
+  load.R &lt;- lm.R[2]
+  int.R &lt;- lm.R[1]
+  load.F &lt;- lm.F[2]
+  int.F &lt;- lm.F[2]
+  integrand &lt;- function(x){
+    product&lt;-(load.R*x + int.R) - (load.F*x + int.F)
+    return((product^2)*dnorm(x,mean(eta), sd(eta)))
+  }
+  inside.sqrt&lt;- integrate(integrand, (min(eta)-10000), (max(eta)+10000))$value
+  sd.pooled.num &lt;- ((length(outcome.R)-1)*sd(outcome.R)) + ((length(outcome.F)-1)*sd(outcome.F))
+  sd.pooled.denom &lt;- (length(outcome.R)-1) + (length(outcome.F)-1)
+  sd.pooled &lt;- sd.pooled.num/sd.pooled.denom
+  sqrt(inside.sqrt)/sd.pooled
+}
+
+erfcinv &lt;- function(x) qnorm(x / 2, lower.tail = FALSE) / sqrt(2)
+
+pss &lt;- function(x, par) {
+  return((x &gt; 0) * par[1] + (1 - par[1]) * pnorm(x, par[2], par[3]))
+}
+
+inverseCdf &lt;- function(p, par) {
+
+  thresh0 &lt;- pss(0, par)
+  thresh1 &lt;- pss(0 + 1e-100, par)
+  out &lt;- numeric(length(p))
+
+  idx1 &lt;- p &lt; thresh0 | p &gt; thresh1 # where F(p) != 0
+  idx0 &lt;- p[idx1] &gt;= thresh1 # where F(p) &lt; 0
+
+  out[idx1] &lt;- par[2] - sqrt(2) * par[3] * erfcinv(2 * (par[1]*idx0 - p[idx1]) / (par[1] - 1))
+  return(out)
+}
+
+postStat &lt;- function(par) {
+  # lower &lt;- myQ(.025, par=par)
+  # error(lower, 0.025, par) &gt; error(0.1, 0.025, par)
+  # diff &lt;- 0.025 - pss(lower, par)
+  # upper &lt;- myQ(.975 - diff, par)
+  # browser()
+  # curve(pss(x, par), from = -2, to = 2, n = 2^12)
+  lower &lt;- inverseCdf(0.025, par)
+  diff &lt;- 0.025 - pss(lower, par)
+  upper &lt;- inverseCdf(0.975 - diff, par)
+  if (upper == 0) upper &lt;- upper + 1e-100
+  diff &lt;- 0.975 - pss(upper, par)
+  lower &lt;- inverseCdf(0.025 - diff, par)
+  pss(upper, par) - pss(lower, par)
+  me &lt;- par[2] * (1 - par[1])
+  return(c(&quot;lower&quot; = lower, &quot;upper&quot; = upper, &quot;model averaged&quot; = me))
+}
+
+bf &lt;- function(d, n, v0) {
+  a &lt;- 1 / sqrt(n * (v0 + 1))
+  b &lt;- n^2 * d^2
+  c &lt;- 2 * (n + 1 / v0)
+  return(a * exp(b / c))
+}
+
+updatePar &lt;- function(rho0, v0, N, ybar) {
+  prec &lt;- (N + 1 / v0)
+  v1 &lt;- 1 / prec
+  c &lt;- N * ybar
+  mu1 &lt;- v1 * c
+  w &lt;- bf(ybar, N, v0)
+  rho1 &lt;- rho0 / (rho0 + (1 - rho0) * w)
+  return(c(&quot;ph0&quot; = rho1, &quot;mu&quot; = mu1, &quot;sd&quot; = sqrt(v1)))
+}</code></pre>
+</div>
+<div id="update-paramenter" class="section level3">
+<h3>Update Paramenter</h3>
+<pre class="r"><code>priorPH0  &lt;- 0.5
+sigmaSlab &lt;- 1
+
+# explicit
+# datExplBlock1 &lt;- subset(datExpl, ValenceBlock == &quot;1&quot; &amp; Block == &quot;1&quot;)$DV
+# datExplBlock2 &lt;- subset(datExpl, ValenceBlock == &quot;1&quot; &amp; Block == &quot;2&quot;)$DV
+
+ybarExpl &lt;- get.dMACS(y.R, y.F, eta)
+nExpl &lt;- length(y.R)
+
+upMAExpl &lt;- updatePar(priorPH0, sigmaSlab, nExpl, ybarExpl[1L])
+ciMAExpl &lt;- postStat(upMAExpl)
+
+tbExplicit &lt;- data.frame(t(c(upMAExpl, ciMAExpl)))
+names(tbExplicit) &lt;- c(&quot;ph0&quot;, &quot;mu1&quot;, &quot;sd1&quot;, &quot;Lower&quot;, &quot;Upper&quot;, &quot;modelAveraged&quot;)
+
+tbExplicit</code></pre>
+<pre><code>##            ph0       mu1        sd1     Lower     Upper modelAveraged
+## 1 9.986886e-19 0.6633703 0.07035975 0.5254677 0.8012728     0.6633703</code></pre>
+<p>Ta da! So we get the posterior mean dMACs estimate of .66 which is
+about the same as the original esimate calculated. Now all that’s is
+left to do multiply this by the posterior probability of dMACS having a
+real effect which is 1 - Ph0(the probability that there is an effect of
+zero).</p>
+<pre class="r"><code>dMACS_Shrunk &lt;- (1-tbExplicit[1])*tbExplicit[2]
+dMACS_Shrunk</code></pre>
+<pre><code>##         ph0
+## 1 0.6633703</code></pre>
+<p>And there we have it! dMACS_Shrunk in action!</p>
+</div>
 
 
 

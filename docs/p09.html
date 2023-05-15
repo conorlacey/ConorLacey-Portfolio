@@ -13,7 +13,7 @@
 
 <title>Portfolio 9</title>
 
-<script src="site_libs/header-attrs-2.13/header-attrs.js"></script>
+<script src="site_libs/header-attrs-2.20/header-attrs.js"></script>
 <script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="site_libs/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
@@ -141,11 +141,15 @@ $(document).ready(function () {
     href = "index.html";
   var menuAnchor = $('a[href="' + href + '"]');
 
-  // mark it active
-  menuAnchor.tab('show');
-
-  // if it's got a parent navbar menu mark it active as well
-  menuAnchor.closest('li.dropdown').addClass('active');
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
 
   // Navbar adjustments
   var navHeight = $(".navbar").first().height() + 15;
@@ -174,8 +178,8 @@ $(document).ready(function () {
   border-radius: 4px;
 }
 
-.tabset-dropdown > .nav-tabs > li.active:before {
-  content: "";
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
   font-family: 'Glyphicons Halflings';
   display: inline-block;
   padding: 10px;
@@ -183,16 +187,9 @@ $(document).ready(function () {
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
-  content: "&#xe258;";
-  border: none;
-}
-
-.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
-  content: "";
+  content: "\e258";
   font-family: 'Glyphicons Halflings';
-  display: inline-block;
-  padding: 10px;
-  border-right: 1px solid #ddd;
+  border: none;
 }
 
 .tabset-dropdown > .nav-tabs > li.active {
@@ -249,9 +246,6 @@ $(document).ready(function () {
   <a href="index.html">Home</a>
 </li>
 <li>
-  <a href="about.html">About</a>
-</li>
-<li>
   <a href="p01.html">Portfolio 1</a>
 </li>
 <li>
@@ -298,13 +292,182 @@ $(document).ready(function () {
 </div>
 
 
-<blockquote>
-<p>The projects should be numbered consecutively (i.e., in the order in
-which you began them), and should include for each project a description
-of the goal, the product (computer program, hand graph, computer graph,
-etc.), the data, and some interpretation. Reports must be reproducible
-and of high quality in terms of writing, grammar, presentation, etc.</p>
-</blockquote>
+<pre class="r"><code>suppressWarnings(library(tidyverse))</code></pre>
+<pre><code>## ── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+## ✔ dplyr     1.1.0     ✔ readr     2.1.4
+## ✔ forcats   1.0.0     ✔ stringr   1.5.0
+## ✔ ggplot2   3.4.1     ✔ tibble    3.2.1
+## ✔ lubridate 1.9.2     ✔ tidyr     1.3.0
+## ✔ purrr     1.0.1     
+## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+## ✖ dplyr::filter() masks stats::filter()
+## ✖ dplyr::lag()    masks stats::lag()
+## ℹ Use the ]8;;http://conflicted.r-lib.org/conflicted package]8;; to force all conflicts to become errors</code></pre>
+<pre class="r"><code>suppressWarnings(suppressMessages(library(rvest)))
+suppressWarnings(library(stringi))
+suppressWarnings(library(glue))
+suppressWarnings(library(robotstxt))</code></pre>
+<div id="introduction" class="section level3">
+<h3>Introduction</h3>
+<p>Ok so I need to buy a new car so I’m going to scrape some data from
+carvana! Specifically I’m looking for a subaru so I will get the link to
+that specific search space from the website. <a
+href="https://www.carvana.com/cars/subaru?email-capture=&amp;page=1"
+class="uri">https://www.carvana.com/cars/subaru?email-capture=&amp;page=1</a></p>
+</div>
+<div id="make-urls" class="section level3">
+<h3>Make Urls</h3>
+<p>First I need to write a function to scrape one page.</p>
+<pre class="r"><code>url &lt;- &quot;https://www.carvana.com/cars/subaru?email-capture=&amp;page=1&quot;
+
+scrape_page &lt;- function(url) {
+
+page &lt;- read_html(url)
+
+#Title and year
+cars &lt;- page %&gt;% 
+  html_nodes(&quot;.year-make&quot;) %&gt;% 
+  html_text()
+
+year &lt;- substring(cars,1,4) %&gt;% as.numeric()
+
+car &lt;- substring(cars, 6, nchar(cars))
+
+#Monthly 
+page %&gt;% 
+  html_nodes(&quot;.middle-frame&quot;) %&gt;% 
+  html_text()
+
+#Cost 
+cost &lt;- page %&gt;% 
+  html_nodes(&quot;.text-2xl&quot;) %&gt;% 
+  html_text()
+
+#Miles 
+miles &lt;- page %&gt;% 
+  html_nodes(&quot;.trim-mileage&quot;) %&gt;% 
+  html_text()
+
+data.frame(car = car, year = year, cost = cost, miles = miles)
+}
+
+head(scrape_page(url))</code></pre>
+<pre><code>##                car year    cost                          miles
+## 1    Subaru Legacy 2020 $23,590            base • 28,707 miles
+## 2 Subaru Crosstrek 2022 $30,590             base • 3,710 miles
+## 3       Subaru BRZ 2019 $32,990          Limited • 5,000 miles
+## 4    Subaru Legacy 2016 $20,990            2.5i • 39,498 miles
+## 5       Subaru WRX 2017 $32,990 WRX STI Limited • 42,585 miles
+## 6  Subaru Forester 2016 $19,590            2.5i • 67,345 miles</code></pre>
+</div>
+<div id="scrape-multiple-urls" class="section level3">
+<h3>Scrape Multiple URLS</h3>
+<p>Ok now we have a function that will scrape a page. However, now let’s
+scrape all 46.</p>
+<pre class="46"><code>root &lt;- &quot;https://www.carvana.com/cars/subaru?email-capture=&amp;page=&quot;
+numbers &lt;- seq(from = 1, to = 46, by = 1)
+urls &lt;- glue(&quot;{root}{numbers}&quot;)
+
+cars.df &lt;- map_dfr(urls,scrape_page) #This will bind the data from each page</code></pre>
+<p>Uh oh? Houston we have a problem. If you look up this error “HTTP
+error 429”, you will find we are having issues with being rate limited.
+Rate limiting is preventing our bot from operating as it is exceeding
+some constraint. The constraint is network traffic or in other words we
+are going through too many pages at a time on Carvana’s website.</p>
+</div>
+<div id="scrape-one-at-a-time" class="section level3">
+<h3>Scrape One At a Time</h3>
+<p>There a few ways to solve this and perhaps the most efficient way
+would be to make an API request of their car inventory. However, they
+unfortunately do not make this available so we will go with the waiting
+around approach. What i mean by this is we can simply just pause the
+programming until the rate limit resets. I suspect this one takes about
+15 minutes and I also suspect it’ll begin to rate limit after scrapping
+about 20 pages.</p>
+<p>Therefore, we shall write a program that scrapes 20 pages at a time
+and will pause for 15 minutes after scraping 20 pages to allow for the
+rate limit to reset. This may seem inefficient, but we are only wanting
+46 pages and personally this is fine by me if I wait about 30 minutes.
+I’ll just answer some emails while this runs.</p>
+<pre class="one"><code>numbers1 &lt;- seq(from = 1, to = 10, by = 1)
+numbers2 &lt;- seq(from = 11, to = 20, by = 1)
+numbers3 &lt;- seq(from = 21, to = 30, by = 1)
+numbers4 &lt;- seq(from = 31, to = 40, by = 1)
+numbers5 &lt;- seq(from = 41, to = 46, by = 1)
+
+urls1 &lt;- glue(&quot;{root}{numbers1}&quot;)
+urls2 &lt;- glue(&quot;{root}{numbers2}&quot;)
+urls3 &lt;- glue(&quot;{root}{numbers3}&quot;)
+urls4 &lt;- glue(&quot;{root}{numbers4}&quot;)
+urls5 &lt;- glue(&quot;{root}{numbers5}&quot;)
+
+cars.df.1 &lt;- map_dfr(urls1,scrape_page)
+cars.df.2 &lt;- map_dfr(urls2,scrape_page)
+Sys.sleep(15*60) #This will pause the programming for 15 minutes
+cars.df.3&lt;- map_dfr(urls3,scrape_page)
+cars.df.4 &lt;- map_dfr(urls4,scrape_page)
+Sys.sleep(15*60) #This will pause the programming for 15 minutes
+cars.df.5 &lt;- map_dfr(urls5,scrape_page)
+
+#Bind the data 
+cars.df &lt;- bind_rows(cars.df.1, 
+                     cars.df.2,
+                     cars.df.3,
+                     cars.df.4,
+                     cars.df.5)
+#Save the data file
+write_rds(cars.df, &quot;cars.RDS&quot;)</code></pre>
+</div>
+<div id="final-edits" class="section level3">
+<h3>Final Edits</h3>
+<p>Ok now we have a our data. However, the data frame still needs some
+editing. Specifically the miles column.</p>
+<pre class="r"><code>cars.df &lt;- read_rds(&quot;cars.RDS&quot;)
+head(cars.df)</code></pre>
+<pre><code>##                car year    cost                       miles
+## 1 Subaru Crosstrek 2016 $23,990 2.0i Limited • 51,811 miles
+## 2   Subaru Impreza 2021 $21,990         base • 12,011 miles
+## 3 Subaru Crosstrek 2019 $28,990 2.0i Limited • 23,356 miles
+## 4  Subaru Forester 2017 $22,990 2.5i Limited • 78,471 miles
+## 5   Subaru Outback 2018 $21,590 2.5i Premium • 95,221 miles
+## 6       Subaru WRX 2019 $29,590  WRX Premium • 32,051 miles</code></pre>
+<p>I don’t want the entire string, I just want to extract the actual
+miles on the vehicle. To do this we will include all characters beyond
+“•”.</p>
+<pre class="r"><code>cars.df$miles &lt;- cars.df$miles %&gt;% 
+  str_sub(str_locate(cars.df$miles, &quot;•&quot;)[,1]+2)
+
+head(cars.df)</code></pre>
+<pre><code>##                car year    cost        miles
+## 1 Subaru Crosstrek 2016 $23,990 51,811 miles
+## 2   Subaru Impreza 2021 $21,990 12,011 miles
+## 3 Subaru Crosstrek 2019 $28,990 23,356 miles
+## 4  Subaru Forester 2017 $22,990 78,471 miles
+## 5   Subaru Outback 2018 $21,590 95,221 miles
+## 6       Subaru WRX 2019 $29,590 32,051 miles</code></pre>
+<p>Perfect now let’s get rid of all the characters I do not want and
+make this column numeric.</p>
+<p>We shall do the same thing for column cost.</p>
+<pre class="r"><code>cars.df$miles &lt;- cars.df$miles %&gt;% 
+  str_replace(&quot;,&quot;, &quot;&quot;) %&gt;% 
+  str_replace(&quot; miles&quot;, &quot;&quot;) %&gt;% 
+  as.numeric()
+
+cars.df$cost &lt;- cars.df$cost %&gt;% 
+  str_sub(2,) %&gt;% 
+  str_replace(&quot;,&quot;, &quot;&quot;) %&gt;% 
+  as.numeric()
+
+head(cars.df)</code></pre>
+<pre><code>##                car year  cost miles
+## 1 Subaru Crosstrek 2016 23990 51811
+## 2   Subaru Impreza 2021 21990 12011
+## 3 Subaru Crosstrek 2019 28990 23356
+## 4  Subaru Forester 2017 22990 78471
+## 5   Subaru Outback 2018 21590 95221
+## 6       Subaru WRX 2019 29590 32051</code></pre>
+<p>Perfect! Now I have my subaru data set!</p>
+</div>
 
 
 

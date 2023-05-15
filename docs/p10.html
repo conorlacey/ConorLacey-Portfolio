@@ -13,7 +13,7 @@
 
 <title>Portfolio 10</title>
 
-<script src="site_libs/header-attrs-2.13/header-attrs.js"></script>
+<script src="site_libs/header-attrs-2.20/header-attrs.js"></script>
 <script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="site_libs/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
@@ -141,11 +141,15 @@ $(document).ready(function () {
     href = "index.html";
   var menuAnchor = $('a[href="' + href + '"]');
 
-  // mark it active
-  menuAnchor.tab('show');
-
-  // if it's got a parent navbar menu mark it active as well
-  menuAnchor.closest('li.dropdown').addClass('active');
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
 
   // Navbar adjustments
   var navHeight = $(".navbar").first().height() + 15;
@@ -174,8 +178,8 @@ $(document).ready(function () {
   border-radius: 4px;
 }
 
-.tabset-dropdown > .nav-tabs > li.active:before {
-  content: "";
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
   font-family: 'Glyphicons Halflings';
   display: inline-block;
   padding: 10px;
@@ -183,16 +187,9 @@ $(document).ready(function () {
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
-  content: "&#xe258;";
-  border: none;
-}
-
-.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
-  content: "";
+  content: "\e258";
   font-family: 'Glyphicons Halflings';
-  display: inline-block;
-  padding: 10px;
-  border-right: 1px solid #ddd;
+  border: none;
 }
 
 .tabset-dropdown > .nav-tabs > li.active {
@@ -249,9 +246,6 @@ $(document).ready(function () {
   <a href="index.html">Home</a>
 </li>
 <li>
-  <a href="about.html">About</a>
-</li>
-<li>
   <a href="p01.html">Portfolio 1</a>
 </li>
 <li>
@@ -298,104 +292,585 @@ $(document).ready(function () {
 </div>
 
 
-<blockquote>
-<p>The projects should be numbered consecutively (i.e., in the order in
-which you began them), and should include for each project a description
-of the goal, the product (computer program, hand graph, computer graph,
-etc.), the data, and some interpretation. Reports must be reproducible
-and of high quality in terms of writing, grammar, presentation, etc.</p>
-</blockquote>
-<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
-hendrerit purus ut dapibus vestibulum. Suspendisse potenti. Cras
-faucibus mauris in leo condimentum lobortis. Cras euismod sollicitudin
-augue, ut venenatis quam placerat eu. Maecenas vulputate rhoncus odio,
-in interdum risus malesuada gravida. Maecenas cursus sed dui sit amet
-lacinia. Nunc dignissim metus nec ex mattis, non rutrum urna cursus.
-Morbi pretium elementum purus, in aliquet libero eleifend ac. Nam
-finibus, ligula sed ultrices pharetra, tellus risus consequat tortor,
-facilisis maximus elit lectus a metus. Sed vel dictum nulla, vitae
-blandit turpis. Integer pulvinar tempor diam ac venenatis. Vestibulum
-est lacus, suscipit et ipsum nec, consectetur iaculis leo. Morbi libero
-lacus, scelerisque non sollicitudin vitae, accumsan sed tellus.
-Suspendisse quis orci tellus.</p>
-<div id="r-markdown" class="section level2">
-<h2>R Markdown</h2>
-<p>This is an R Markdown document. Markdown is a simple formatting
-syntax for authoring HTML, PDF, and MS Word documents. For more details
-on using R Markdown see <a href="http://rmarkdown.rstudio.com"
-class="uri">http://rmarkdown.rstudio.com</a>.</p>
-<p>When you click the <strong>Knit</strong> button a document will be
-generated that includes both content as well as the output of any
-embedded R code chunks within the document. You can embed an R code
-chunk like this:</p>
-<pre class="r"><code>summary(cars)</code></pre>
-<pre><code>##      speed           dist       
-##  Min.   : 4.0   Min.   :  2.00  
-##  1st Qu.:12.0   1st Qu.: 26.00  
-##  Median :15.0   Median : 36.00  
-##  Mean   :15.4   Mean   : 42.98  
-##  3rd Qu.:19.0   3rd Qu.: 56.00  
-##  Max.   :25.0   Max.   :120.00</code></pre>
-<p>Maecenas luctus convallis efficitur. Vestibulum pharetra laoreet nibh
-non congue. Etiam ornare, neque sit amet condimentum aliquet, odio ipsum
-porttitor elit, eu malesuada turpis augue sit amet arcu. Integer nec
-quam et massa congue tincidunt. Donec sit amet diam placerat, pharetra
-quam nec, ornare nisl. Quisque erat turpis, imperdiet eget tellus non,
-interdum ultricies nisi. Fusce a erat est. Nunc sollicitudin ante non
-eros vulputate, sed eleifend nulla hendrerit. Nam ac quam nulla.
-Praesent a ligula a justo auctor tristique ac vel neque. Class aptent
-taciti sociosqu ad litora torquent per conubia nostra, per inceptos
-himenaeos. Quisque tempor felis sed lorem efficitur volutpat. Aliquam
-lectus diam, lacinia vitae velit eget, pulvinar porta massa. Curabitur
-nec egestas mi.</p>
+<pre class="r"><code>suppressWarnings(
+  suppressMessages(
+    c(
+    library(shiny),
+    library(tidyverse),
+    library(rsconnect)
+    )
+  )
+)</code></pre>
+<pre><code>##  [1] &quot;shiny&quot;     &quot;stats&quot;     &quot;graphics&quot;  &quot;grDevices&quot; &quot;utils&quot;     &quot;datasets&quot; 
+##  [7] &quot;methods&quot;   &quot;base&quot;      &quot;lubridate&quot; &quot;forcats&quot;   &quot;stringr&quot;   &quot;dplyr&quot;    
+## [13] &quot;purrr&quot;     &quot;readr&quot;     &quot;tidyr&quot;     &quot;tibble&quot;    &quot;ggplot2&quot;   &quot;tidyverse&quot;
+## [19] &quot;shiny&quot;     &quot;stats&quot;     &quot;graphics&quot;  &quot;grDevices&quot; &quot;utils&quot;     &quot;datasets&quot; 
+## [25] &quot;methods&quot;   &quot;base&quot;      &quot;rsconnect&quot; &quot;lubridate&quot; &quot;forcats&quot;   &quot;stringr&quot;  
+## [31] &quot;dplyr&quot;     &quot;purrr&quot;     &quot;readr&quot;     &quot;tidyr&quot;     &quot;tibble&quot;    &quot;ggplot2&quot;  
+## [37] &quot;tidyverse&quot; &quot;shiny&quot;     &quot;stats&quot;     &quot;graphics&quot;  &quot;grDevices&quot; &quot;utils&quot;    
+## [43] &quot;datasets&quot;  &quot;methods&quot;   &quot;base&quot;</code></pre>
+<div id="introduction" class="section level3">
+<h3>Introduction</h3>
+<p>Alright for a my last portfolio I am going to be making a shiny app
+for Eric. Specifically I am going to make a z-distribution that will be
+able to shade in the p-values and display the alpha cut-off rejection
+regions.</p>
+<p>Now shiny is a whole different ball game for r, so I’m going to start
+off very simple and work our way up to more difficult tasks for this
+project.</p>
 </div>
-<div id="including-plots" class="section level2">
-<h2>Including Plots</h2>
-<p>You can also embed plots, for example:</p>
-<p><img src="p10_files/figure-html/pressure-1.png" width="672" /></p>
-<p>Note that the <code>echo = FALSE</code> parameter was added to the
-code chunk to prevent printing of the R code that generated the
-plot.</p>
-<p>Morbi tincidunt mollis odio sit amet feugiat. Ut vel risus eu ante
-dictum consequat. Integer et luctus mauris. Donec nec faucibus urna, sed
-commodo risus. Nam elementum pulvinar erat, eget convallis est blandit
-vel. Etiam gravida sapien eu massa hendrerit maximus. Proin dolor quam,
-porta vitae libero non, venenatis porta tellus. Vivamus et elit a est
-aliquet consequat. Proin tempus, purus quis suscipit placerat, dui nunc
-euismod dui, sit amet luctus leo lectus in risus. Phasellus consectetur
-eleifend arcu. Nullam venenatis blandit nulla ut ullamcorper. Vestibulum
-eu arcu quis massa scelerisque sodales in ac augue. Quisque dapibus
-fringilla turpis, ut cursus tortor cursus sed. Sed facilisis quam eget
-neque viverra venenatis. Suspendisse ut lorem nec erat elementum
-bibendum. Curabitur lobortis purus in cursus blandit.</p>
-<p>Aliquam sed ex et lorem consequat feugiat at porta leo. Fusce id
-hendrerit tellus. Maecenas dictum felis neque, quis dictum metus
-tristique eu. Vivamus sed blandit nisl. Integer ut urna dolor. Cras in
-egestas eros, in aliquam nisi. Duis vitae elementum quam. Vivamus vel
-turpis commodo, porttitor urna vitae, viverra sem. Nam nec dignissim
-erat, id viverra libero. Integer vel lectus pellentesque tortor
-fringilla posuere. Vivamus quis magna accumsan, porta tortor at, aliquam
-urna. Aliquam vestibulum ante massa, ut gravida lectus sagittis
-vitae.</p>
-<p>Sed eget ipsum auctor, gravida magna sit amet, tincidunt mi. Nulla
-erat ante, volutpat nec sem eget, luctus posuere est. Praesent convallis
-nunc ac turpis bibendum, in maximus magna convallis. Vestibulum ante
-ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae;
-Sed sit amet nulla ante. Sed elit sem, lobortis nec nisi a, rhoncus
-ornare nunc. Curabitur ultrices neque feugiat, facilisis magna eu,
-consectetur magna. Mauris id eleifend ex.</p>
-<p>Morbi tincidunt mollis odio sit amet feugiat. Ut vel risus eu ante
-dictum consequat. Integer et luctus mauris. Donec nec faucibus urna, sed
-commodo risus. Nam elementum pulvinar erat, eget convallis est blandit
-vel. Etiam gravida sapien eu massa hendrerit maximus. Proin dolor quam,
-porta vitae libero non, venenatis porta tellus. Vivamus et elit a est
-aliquet consequat. Proin tempus, purus quis suscipit placerat, dui nunc
-euismod dui, sit amet luctus leo lectus in risus. Phasellus consectetur
-eleifend arcu. Nullam venenatis blandit nulla ut ullamcorper. Vestibulum
-eu arcu quis massa scelerisque sodales in ac augue. Quisque dapibus
-fringilla turpis, ut cursus tortor cursus sed. Sed facilisis quam eget
-neque viverra venenatis. Suspendisse ut lorem nec erat elementum
-bibendum. Curabitur lobortis purus in cursus blandit.</p>
+<div id="normal-distribution" class="section level3">
+<h3>Normal Distribution</h3>
+<p>Let’s begin by making sure we can create a normal distribution in the
+app.</p>
+<pre class="r"><code>ui &lt;- fluidPage(
+    titlePanel(&quot;Z-Distribution&quot;),
+    mainPanel(plotOutput(&quot;distPlot&quot;))
+)
+
+server &lt;- function(input,output){
+  x &lt;- seq(-4,4, length.out = 1e4)
+  y &lt;- dnorm(x)
+  
+  dat &lt;- data.frame( x = x, y = y) #Normal Dist. Data
+  
+    graph &lt;- dat %&gt;% ggplot(aes(x = x, y = y)) +
+    geom_line(color = &quot;blue&quot;, linewidth = 1) +
+    ylab(&quot;Density&quot;) +
+    xlab(&quot;Z&quot;) + 
+    theme_classic() +
+    theme(axis.title = element_text(size = 20),
+          axis.text = element_text(size = 15))
+    
+    output$distPlot &lt;- renderPlot({graph})
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)</code></pre>
+<div style="width: 100% ; height: 400px ; text-align: center; box-sizing: border-box; -moz-box-sizing: border-box; -webkit-box-sizing: border-box;" class="muted well">Shiny applications not supported in static R Markdown documents</div>
+</div>
+<div id="slider-input" class="section level3">
+<h3>Slider Input</h3>
+<p>Perfect now let’s add a slide input for the z-value as well as
+textoutput for the z-value. We will also shade in the p-value region and
+display the p-value.</p>
+<pre class="r"><code>ui &lt;- fluidPage(
+  
+  # Application title
+  titlePanel(&quot;Z-Distribution&quot;),
+  
+  sidebarLayout(
+    sidebarPanel(
+      
+      sliderInput(inputId = &quot;z&quot;,   #Sliding Bar
+                  label = &quot;Z Value&quot;,
+                  min = -4,
+                  max = 4,
+                  value = 0,
+                  step = 0.01)
+    ),
+    
+    # Sidebar with a slider input for number of bins 
+    # Show a plot of the generated distribution
+    mainPanel(
+      plotOutput(&quot;distPlot&quot;),
+      h4(textOutput(&quot;text1&quot;)),
+    )
+  )
+)
+
+server &lt;- function(input, output) {
+  
+  x &lt;- seq(-4,4, length.out = 1e4)
+  y &lt;- dnorm(x)
+  
+  dat &lt;- data.frame( x = x, y = y) #Normal Dist. Data
+  
+  graph&lt;- dat %&gt;% ggplot(aes(x = x, y = y)) +
+    geom_line(color = &quot;blue&quot;, linewidth = 1) +
+    ylab(&quot;Density&quot;) +
+    xlab(&quot;Z&quot;) + 
+    theme_classic() +
+    theme(axis.title = element_text(size = 20),
+          axis.text = element_text(size = 15))
+  
+  shade = 0.5
+  
+  dottedlinesize = 1
+  
+
+  observe({
+    
+      x &lt;- seq(input$z,4, length.out = 1e4)
+      y &lt;- dnorm(x)
+      x &lt;- c(x,rev(x))
+      y &lt;- c(y,rep(0, 1e4))
+      
+      tail &lt;- data.frame(x = x, y = y)
+      
+      graph &lt;- graph + geom_polygon(data = tail,
+                                    fill = &quot;#36b8f5&quot;, alpha = shade) 
+      
+      output$text2 &lt;- renderText(
+        paste(&quot;P-value = &quot;,
+              integrate(dnorm, input$z, Inf)$value %&gt;% round(digits = 3) %&gt;% as.character())
+      )
+
+      output$distPlot &lt;- renderPlot({graph})
+      
+    })
+  
+  output$text1 &lt;- renderText(
+            paste(&quot;-value = &quot;,
+              input$z %&gt;% round(digits = 3) %&gt;% as.character())
+            
+  )
+
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)</code></pre>
+<div style="width: 100% ; height: 400px ; text-align: center; box-sizing: border-box; -moz-box-sizing: border-box; -webkit-box-sizing: border-box;" class="muted well">Shiny applications not supported in static R Markdown documents</div>
+</div>
+<div id="select-direction" class="section level3">
+<h3>Select Direction</h3>
+<p>Alright now how about we specify the direction of our p-value.</p>
+<pre class="r"><code>ui &lt;- fluidPage(
+  
+  # Application title
+  titlePanel(&quot;Z-Distribution&quot;),
+  
+  sidebarLayout(
+    sidebarPanel(
+      
+      selectInput(inputId = &quot;direction&quot;, 
+                  label = &quot;Direction:&quot;,
+                  choices = list(&quot;Right Tail&quot;, &quot;Left Tail&quot;, &quot;Two-Tailed&quot;)),
+      
+      
+      sliderInput(inputId = &quot;z&quot;,   #Sliding Bar
+                  label = &quot;Z Value&quot;,
+                  min = -4,
+                  max = 4,
+                  value = 0,
+                  step = 0.01),
+    ),
+    
+    # Sidebar with a slider input for number of bins 
+    # Show a plot of the generated distribution
+    mainPanel(
+      plotOutput(&quot;distPlot&quot;),
+      h4(textOutput(&quot;text1&quot;)),
+      h4(textOutput(&quot;text2&quot;))
+    )
+  )
+)
+
+server &lt;- function(input, output) {
+  
+  x &lt;- seq(-4,4, length.out = 1e4)
+  y &lt;- dnorm(x)
+  
+  dat &lt;- data.frame( x = x, y = y) #Normal Dist. Data
+  
+  graph&lt;- dat %&gt;% ggplot(aes(x = x, y = y)) +
+    geom_line(color = &quot;blue&quot;, linewidth = 1) +
+    ylab(&quot;Density&quot;) +
+    xlab(&quot;Z&quot;) + 
+    theme_classic() +
+    theme(axis.title = element_text(size = 20),
+          axis.text = element_text(size = 15))
+  
+  shade = 0.5
+  
+  dottedlinesize = 1
+  
+
+# Input Direction ---------------------------------------------------------
+
+  observe({
+    if(input$direction == &quot;Right Tail&quot;){
+      
+      x &lt;- seq(input$z,4, length.out = 1e4)
+      y &lt;- dnorm(x)
+      x &lt;- c(x,rev(x))
+      y &lt;- c(y,rep(0, 1e4))
+      
+      tail &lt;- data.frame(x = x, y = y)
+      
+      graph &lt;- graph + geom_polygon(data = tail,
+                                    fill = &quot;#36b8f5&quot;, alpha = shade) 
+      
+      output$text2 &lt;- renderText(
+        paste(&quot;P-value = &quot;,
+              integrate(dnorm, input$z, Inf)$value %&gt;% round(digits = 3) %&gt;% as.character())
+      )
+
+      output$distPlot &lt;- renderPlot({graph})
+    }
+    if(input$direction == &quot;Left Tail&quot;){
+      
+      x &lt;- seq(input$z, -4, length.out = 1e4)
+      y &lt;- dnorm(x)
+      x &lt;- c(x,rev(x))
+      y &lt;- c(y,rep(0, 1e4))
+      
+      tail &lt;- data.frame(x = x, y = y)
+      
+      graph &lt;- graph + geom_polygon(data = tail,
+                                    fill = &quot;#36b8f5&quot;, alpha = shade)
+    
+      output$text2 &lt;- renderText(
+        paste(&quot;P-value = &quot;,
+              integrate(dnorm, -Inf, input$z)$value %&gt;% round(digits = 3) %&gt;% as.character())
+      )
+     
+      output$distPlot &lt;- renderPlot({graph})
+    }
+
+    if(input$direction == &quot;Two-Tailed&quot;){
+      if (input$z &gt;= 0){
+        
+        x &lt;- seq(-input$z, -4, length.out = 1e4)
+        y &lt;- dnorm(x)
+        x &lt;- c(x,rev(x))
+        y &lt;- c(y,rep(0, 1e4))
+        
+        tailL &lt;- data.frame(x = x, y = y)
+        
+        
+        x &lt;- seq(input$z, 4, length.out = 1e4)
+        y &lt;- dnorm(x)
+        x &lt;- c(x,rev(x))
+        y &lt;- c(y,rep(0, 1e4))
+        
+        tailR &lt;- data.frame(x = x, y = y)
+        
+        graph &lt;- graph + 
+          geom_polygon(data = tailR,
+                       fill = &quot;#36b8f5&quot;, alpha = shade) + 
+          geom_polygon(data = tailL,
+                       fill = &quot;#36b8f5&quot;, alpha = shade)
+        
+        output$text2 &lt;- renderText(
+          paste(&quot;P-value = &quot;,
+                (integrate(dnorm, input$z, Inf)$value*2) %&gt;% round(digits = 3) %&gt;% as.character())
+        )
+        
+
+        output$distPlot &lt;- renderPlot({graph})
+      }
+      
+      if (input$z &lt; 0 ){
+        
+        x &lt;- seq(input$z, -4, length.out = 1e4)
+        y &lt;- dnorm(x)
+        x &lt;- c(x,rev(x))
+        y &lt;- c(y,rep(0, 1e4))
+        
+        tailL &lt;- data.frame(x = x, y = y)
+        
+        
+        x &lt;- seq(-input$z, 4, length.out = 1e4)
+        y &lt;- dnorm(x)
+        x &lt;- c(x,rev(x))
+        y &lt;- c(y,rep(0, 1e4))
+        
+        tailR &lt;- data.frame(x = x, y = y)
+        
+        graph &lt;- graph + 
+          geom_polygon(data = tailR,
+                       fill = &quot;#36b8f5&quot;, alpha = shade) + 
+          geom_polygon(data = tailL,
+                       fill = &quot;#36b8f5&quot;, alpha = shade)
+        
+        output$text2 &lt;- renderText(
+          paste(&quot;P-value = &quot;,
+                (integrate(dnorm, -Inf, input$z)$value*2) %&gt;% round(digits = 3) %&gt;% as.character())
+        )
+        
+        output$distPlot &lt;- renderPlot({graph})
+      }
+    }
+  })
+  
+  output$text1 &lt;- renderText(
+    paste(&quot;Z-value = &quot;, {input$z}))
+  
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)</code></pre>
+<div style="width: 100% ; height: 400px ; text-align: center; box-sizing: border-box; -moz-box-sizing: border-box; -webkit-box-sizing: border-box;" class="muted well">Shiny applications not supported in static R Markdown documents</div>
+</div>
+<div id="alpha-values" class="section level3">
+<h3>Alpha Values</h3>
+<p>Alright and now the last thing I want to introduce are alpha values
+or the rejection thresholds that are typical in a statistical test. I
+will make another select input widget for this as well.</p>
+<pre class="r"><code>#
+# This is a Shiny web application. You can run the application by clicking
+# the &#39;Run App&#39; button above.
+#
+# Find out more about building applications with Shiny here:
+#
+#    http://shiny.rstudio.com/
+#
+
+library(shiny)
+library(tidyverse)
+library(rsconnect)
+library(ggpattern)</code></pre>
+<pre><code>## Warning: package &#39;ggpattern&#39; was built under R version 4.1.2</code></pre>
+<pre class="r"><code># Define UI for application that draws a histogram
+ui &lt;- fluidPage(
+  
+  # Application title
+  titlePanel(&quot;Z-Distribution&quot;),
+  
+  sidebarLayout(
+    sidebarPanel(
+      
+      selectInput(inputId = &quot;direction&quot;, 
+                  label = &quot;Direction:&quot;,
+                  choices = list(&quot;Right Tail&quot;, &quot;Left Tail&quot;, &quot;Two-Tailed&quot;)),
+      
+      selectInput(inputId = &quot;alpha&quot;,
+                  label = &quot;Alpha:&quot;,
+                  choices = list(&quot;None&quot;, &quot;0.05&quot;, &quot;0.025&quot;)),
+      
+      sliderInput(inputId = &quot;z&quot;,   #Sliding Bar
+                  label = &quot;Z Value&quot;,
+                  min = -4,
+                  max = 4,
+                  value = 0,
+                  step = 0.01),
+    ),
+    
+    # Sidebar with a slider input for number of bins 
+    # Show a plot of the generated distribution
+    mainPanel(
+      plotOutput(&quot;distPlot&quot;),
+      h4(textOutput(&quot;text1&quot;)),
+      h4(textOutput(&quot;text2&quot;))
+    )
+  )
+)
+
+server &lt;- function(input, output) {
+  
+  x &lt;- seq(-4,4, length.out = 1e4)
+  y &lt;- dnorm(x)
+  
+  dat &lt;- data.frame( x = x, y = y) #Normal Dist. Data
+  
+  graph&lt;- dat %&gt;% ggplot(aes(x = x, y = y)) +
+    geom_line(color = &quot;blue&quot;, linewidth = 1) +
+    ylab(&quot;Density&quot;) +
+    xlab(&quot;Z&quot;) + 
+    theme_classic() +
+    theme(axis.title = element_text(size = 20),
+          axis.text = element_text(size = 15))
+  
+  shade = 0.5
+  
+  dottedlinesize = 1
+  
+
+# Input Direction ---------------------------------------------------------
+
+  observe({
+    if(input$direction == &quot;Right Tail&quot;){
+      
+      x &lt;- seq(input$z,4, length.out = 1e4)
+      y &lt;- dnorm(x)
+      x &lt;- c(x,rev(x))
+      y &lt;- c(y,rep(0, 1e4))
+      
+      tail &lt;- data.frame(x = x, y = y)
+      
+      graph &lt;- graph + geom_polygon(data = tail,
+                                    fill = &quot;#36b8f5&quot;, alpha = shade) 
+      
+      output$text2 &lt;- renderText(
+        paste(&quot;P-value = &quot;,
+              integrate(dnorm, input$z, Inf)$value %&gt;% round(digits = 3) %&gt;% as.character())
+      )
+      if(input$alpha == 0.05){
+        al.L &lt;- data.frame(x = c(1.645, 1.645), y = c(0, dnorm(1.645)))
+        
+        stripes &lt;- data.frame(x = seq(1.645,))
+        graph &lt;- graph + 
+          geom_line(data = al.L, aes(x = x, y = y), 
+                                   color = &quot;red&quot;, linetype = &quot;dashed&quot;, 
+                                   linewidth = dottedlinesize)
+      }
+      if(input$alpha == 0.025){
+        al.L &lt;- data.frame(x = c(1.96, 1.96), y = c(0, dnorm(1.96)))
+        graph &lt;- graph + geom_line(data = al.L, aes(x = x, y = y),
+                                   color = &quot;red&quot;, linetype = &quot;dashed&quot;,
+                                   linewidth = dottedlinesize)
+      }
+
+      output$distPlot &lt;- renderPlot({graph})
+    }
+    if(input$direction == &quot;Left Tail&quot;){
+      
+      x &lt;- seq(input$z, -4, length.out = 1e4)
+      y &lt;- dnorm(x)
+      x &lt;- c(x,rev(x))
+      y &lt;- c(y,rep(0, 1e4))
+      
+      tail &lt;- data.frame(x = x, y = y)
+      
+      graph &lt;- graph + geom_polygon(data = tail,
+                                    fill = &quot;#36b8f5&quot;, alpha = shade)
+    
+      output$text2 &lt;- renderText(
+        paste(&quot;P-value = &quot;,
+              integrate(dnorm, -Inf, input$z)$value %&gt;% round(digits = 3) %&gt;% as.character())
+      )
+      
+      if(input$alpha == 0.05){
+        al.L &lt;- data.frame(x = c(-1.645, -1.645), y = c(0, dnorm(-1.645)))
+        graph &lt;- graph + geom_line(data = al.L, aes(x = x, y = y),
+                                   color = &quot;red&quot;, linetype = &quot;dashed&quot;,
+                                   linewidth = dottedlinesize)
+      }
+      if(input$alpha == 0.025){
+        al.L &lt;- data.frame(x = c(-1.96, -1.96), y = c(0, dnorm(-1.96)))
+        graph &lt;- graph + geom_line(data = al.L, aes(x = x, y = y),
+                                   color = &quot;red&quot;, linetype = &quot;dashed&quot;,
+                                   linewidth = dottedlinesize)
+      }
+     
+      output$distPlot &lt;- renderPlot({graph})
+    }
+
+    if(input$direction == &quot;Two-Tailed&quot;){
+      if (input$z &gt;= 0){
+        
+        x &lt;- seq(-input$z, -4, length.out = 1e4)
+        y &lt;- dnorm(x)
+        x &lt;- c(x,rev(x))
+        y &lt;- c(y,rep(0, 1e4))
+        
+        tailL &lt;- data.frame(x = x, y = y)
+        
+        
+        x &lt;- seq(input$z, 4, length.out = 1e4)
+        y &lt;- dnorm(x)
+        x &lt;- c(x,rev(x))
+        y &lt;- c(y,rep(0, 1e4))
+        
+        tailR &lt;- data.frame(x = x, y = y)
+        
+        graph &lt;- graph + 
+          geom_polygon(data = tailR,
+                       fill = &quot;#36b8f5&quot;, alpha = shade) + 
+          geom_polygon(data = tailL,
+                       fill = &quot;#36b8f5&quot;, alpha = shade)
+        
+        output$text2 &lt;- renderText(
+          paste(&quot;P-value = &quot;,
+                (integrate(dnorm, input$z, Inf)$value*2) %&gt;% round(digits = 3) %&gt;% as.character())
+        )
+        
+        if(input$alpha == 0.05){
+          al.L &lt;- data.frame(x = c(-1.96, -1.96), y = c(0, dnorm(-1.96)))
+          al.R &lt;- data.frame(x = c(1.96, 1.96), y = c(0, dnorm(1.96)))
+          graph &lt;- graph + 
+            geom_line(data = al.L, aes(x = x, y = y),
+                      color = &quot;red&quot;, linetype = &quot;dashed&quot;,
+                      linewidth = dottedlinesize) +
+            geom_line(data = al.R, aes(x = x, y = y),
+                      color = &quot;red&quot;, linetype = &quot;dashed&quot;,
+                      linewidth = dottedlinesize) 
+        }
+        if(input$alpha == 0.025){
+          al.L &lt;- data.frame(x = c(-2.24, -2.24), y = c(0, dnorm(-2.24)))
+          al.R &lt;- data.frame(x = c(2.24, 2.24), y = c(0, dnorm(2.24)))
+          graph &lt;- graph + 
+            geom_line(data = al.L, aes(x = x, y = y),
+                      color = &quot;red&quot;, linetype = &quot;dashed&quot;,
+                      linewidth = dottedlinesize) +
+            geom_line(data = al.R, aes(x = x, y = y),
+                      color = &quot;red&quot;, linetype = &quot;dashed&quot;,
+                      linewidth = dottedlinesize)
+        }
+
+        output$distPlot &lt;- renderPlot({graph})
+      }
+      
+      if (input$z &lt; 0 ){
+        
+        x &lt;- seq(input$z, -4, length.out = 1e4)
+        y &lt;- dnorm(x)
+        x &lt;- c(x,rev(x))
+        y &lt;- c(y,rep(0, 1e4))
+        
+        tailL &lt;- data.frame(x = x, y = y)
+        
+        
+        x &lt;- seq(-input$z, 4, length.out = 1e4)
+        y &lt;- dnorm(x)
+        x &lt;- c(x,rev(x))
+        y &lt;- c(y,rep(0, 1e4))
+        
+        tailR &lt;- data.frame(x = x, y = y)
+        
+        graph &lt;- graph + 
+          geom_polygon(data = tailR,
+                       fill = &quot;#36b8f5&quot;, alpha = shade) + 
+          geom_polygon(data = tailL,
+                       fill = &quot;#36b8f5&quot;, alpha = shade)
+        
+        output$text2 &lt;- renderText(
+          paste(&quot;P-value = &quot;,
+                (integrate(dnorm, -Inf, input$z)$value*2) %&gt;% round(digits = 3) %&gt;% as.character())
+        )
+        
+        if(input$alpha == 0.05){
+          al.L &lt;- data.frame(x = c(-1.96, -1.96), y = c(0, dnorm(-1.96)))
+          al.R &lt;- data.frame(x = c(1.96, 1.96), y = c(0, dnorm(1.96)))
+          
+          graph &lt;- graph + 
+            geom_line(data = al.L, aes(x = x, y = y),
+                      color = &quot;red&quot;, linetype = &quot;dashed&quot;,
+                      linewidth = dottedlinesize) +
+            geom_line(data = al.R, aes(x = x, y = y),
+                      color = &quot;red&quot;, linetype = &quot;dashed&quot;,
+                      linewidth = dottedlinesize) 
+        }
+        if(input$alpha == 0.025){
+          al.L &lt;- data.frame(x = c(-2.24, -2.24), y = c(0, dnorm(-2.24)))
+          al.R &lt;- data.frame(x = c(2.24, 2.24), y = c(0, dnorm(2.24)))
+          graph &lt;- graph + 
+            geom_line(data = al.L, aes(x = x, y = y),
+                      color = &quot;red&quot;, linetype = &quot;dashed&quot;,
+                      linewidth = dottedlinesize) +
+            geom_line(data = al.R, aes(x = x, y = y),
+                      color = &quot;red&quot;, linetype = &quot;dashed&quot;,
+                      linewidth = dottedlinesize)
+        }
+        
+        output$distPlot &lt;- renderPlot({graph})
+      }
+    }
+  })
+  
+  output$text1 &lt;- renderText(
+    paste(&quot;Z-value = &quot;, {input$z}))
+  
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)</code></pre>
+<div style="width: 100% ; height: 400px ; text-align: center; box-sizing: border-box; -moz-box-sizing: border-box; -webkit-box-sizing: border-box;" class="muted well">Shiny applications not supported in static R Markdown documents</div>
+<p>Ta da! An easy to use z-distribution that Eric can use!</p>
+<p>As a matter of fact. Here is a link to the finished product!</p>
+<p><a href="https://conorhlacey.shinyapps.io/normal-distribution-app/"
+class="uri">https://conorhlacey.shinyapps.io/normal-distribution-app/</a></p>
 </div>
 
 
